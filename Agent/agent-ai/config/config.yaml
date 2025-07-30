@@ -1,0 +1,26 @@
+# agentic-ai/config/config.yaml
+
+agent:
+  name: "LabAssistant"
+  # LangGraph 워크플로우 선택 ('single_agent_flow' 또는 'multi_agent_flow')
+  flow: "single_agent_flow"
+
+llm:
+  # LLM 공급자 선택 ('google' 또는 'openai')
+  provider: "openai"
+  #  gpt-4o-mini, gemini-2.5-flash 등 모델 이름
+  model: "gpt-4o-mini"
+  temperature: 0.7
+
+memory:
+  # 대화 기록을 저장할 방식 ('redis' 또는 'in_memory')
+  type: "in_memory"
+  session_id: "default_session"
+
+tools:
+  - tool: "rag_tool"
+    name: "knowledge_base_retriever"
+    description: "실험실 문서, 프로토콜, 연구 자료 등 전문 지식에 대한 질문에 답변합니다."
+    vector_store: "chroma"
+    embedding_model: "text-embedding-004" # Google AI의 임베딩 모델
+    collection_name: "lab_documents"
