@@ -25,7 +25,7 @@ source venv/bin/activate      # Mac/Linux
 venv\Scripts\activate         # Windows PowerShell
 ```
 
-✅ 터미널 프롬프트에 `(venv)` 표시가 보이면 성공
+터미널 프롬프트에 `(venv)` 표시가 보이면 성공
 
 ## 3️⃣ pip 최신화
 
@@ -39,8 +39,6 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-⚠️ 만약 conda 환경에서 추출된 requirements.txt라면 `@ file:///...` 경로를 제거하고 일반 패키지명만 남겨주세요.
-
 **예시 변환:**
 
 ```bash
@@ -53,48 +51,4 @@ pip install -r cleaned_requirements.txt
 ```bash
 python -V           # Python 3.11.13
 pip list | wc -l    # 설치된 패키지 수 확인
-```
-
-## 🤖 프로젝트 구조
-
-```
-Aiffelton/
-├── README.md
-├── .gitignore
-├── .python-version
-└── Agent/
-    ├── .envsample              # 환경변수 템플릿
-    └── agent-ai/
-        ├── main.py             # 메인 실행 파일
-        ├── requirements.txt    # 패키지 의존성
-        ├── config/
-        │   ├── config.yaml     # 설정 파일
-        │   ├── langgraph/      # LangGraph 워크플로우
-        │   └── ontologies/     # 도메인 온톨로지
-        └── modules/
-            ├── agent_core.py   # 핵심 에이전트 로직
-            ├── llm_module.py   # LLM 통합
-            ├── memory_module.py # 메모리 관리
-            └── tools/          # 도구 모듈들
-```
-
-## 🚀 실행 방법
-
-1. 가상환경 활성화 후 Agent 디렉토리로 이동:
-
-```bash
-cd Agent/agent-ai
-```
-
-2. 환경변수 설정:
-
-```bash
-cp ../.envsample .env
-# .env 파일을 편집하여 API 키 등을 설정
-```
-
-3. 애플리케이션 실행:
-
-```bash
-python main.py
 ```
