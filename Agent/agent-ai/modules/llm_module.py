@@ -1,25 +1,26 @@
-import os
-from langchain_openai import ChatOpenAI
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.messages import BaseMessage
-from dotenv import load_dotenv
+from typing import Dict, Any
+from langchain_core.messages import BaseMessage, HumanMessage
 
-load_dotenv()
 
-class LLMModule:
-    def __init__(self, provider: str):
-        if provider == 'openai':
-            if not os.getenv("OPENAI_API_KEY"):
-                raise ValueError("OPENAI_API_KEY 환경 변수가 설정되지 않았습니다.")
-            self.llm = ChatOpenAI()
-        elif provider == 'gemini':
-            if not os.getenv("GOOGLE_API_KEY"):
-                raise ValueError("GOOGLE_API_KEY 환경 변수가 설정되지 않았습니다.")
-            self.llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash")
-        else:
-            raise ValueError(f"지원하지 않는 제공자입니다: {provider}. 'openai' 또는 'gemini'를 선택해주세요.")
+# init 
+# process
 
-    def process(self, query: str) -> str:
-
-        response: BaseMessage = self.llm.invoke(query)
-        return response.content
+class LLMNode:
+    def __init__(self, agent_core):
+        self.agent_core = agent_core
+        # init
+    
+    def process(self, state: Dict[str, Any]) -> Dict[str, Any]:
+        messages = state.get('messages', [])
+        
+        # RAG 컨텍스트 추가
+        if state.get('context'):
+            context_msg = HumanMessage(content=f"[참고 컨텍스트]\n{state['context']}")
+            messages = list(messages) + [context_msg]
+        
+        try:
+            response = self.agent_core.get_llm().invoke(messages)
+            return {"messages": [response]}
+        except Exception as e:
+            print(f"LLM 호출 오류: {e}")
+            return {"messages": []}

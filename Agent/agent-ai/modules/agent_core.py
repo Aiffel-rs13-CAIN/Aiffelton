@@ -18,7 +18,7 @@ class AgentCore:
     def _initialize_llm(self):
         llm_config = self.config.get('llm', {})
         provider = llm_config.get('provider', 'google')
-        model = llm_config.get('model', 'gemini-1.5-pro-latest')
+        model = llm_config.get('model', 'gemini-2.5-flash')
         temperature = llm_config.get('temperature', 0.7)
 
         if provider == 'google':
