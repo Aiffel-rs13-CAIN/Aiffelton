@@ -1,0 +1,25 @@
+{
+    "name": "Recorder Agent",
+    "description": "Receives summarized text and records it in a DB",
+    "host": "localhost",
+    "port": 10001,
+    "version": "1.0.0",
+    "skills": [
+      {
+        "id": "recorder",
+        "name": "Recorder",
+        "description": "Stores input and summary into DB",
+        "tags": ["recorder", "storage"],
+        "examples": ["Store input:xxx and summary:yyy"]
+      }
+    ],
+    "capabilities": {
+      "streaming": true,
+      "pushNotifications": false
+    },
+    "defaultInputModes": ["text"],
+    "defaultOutputModes": ["text"],
+    "executorClass": "RecorderAgentExecutor",
+    "executorParams": {
+    }
+}

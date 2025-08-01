@@ -1,0 +1,27 @@
+{
+    "name": "Summarize Agent",
+    "description": "Summarizes text and records the results via A2A protocol",
+    "host": "localhost",
+    "port": 10000,
+    "version": "1.0.0",
+    "skills": [
+      {
+        "id": "summarize",
+        "name": "Text Summarization",
+        "description": "Summarizes input text and forwards to recorder agent",
+        "tags": ["summarize", "text processing"],
+        "examples": ["Please summarize this long text for me"]
+      }
+    ],
+    "capabilities": {
+      "streaming": true,
+      "pushNotifications": true
+    },
+    "defaultInputModes": ["text"],
+    "defaultOutputModes": ["text"],
+    "executorClass": "SummarizerAgentExecutor",
+    "executorParams": {
+      
+    }
+}
+  
