@@ -2,7 +2,6 @@
 
 agent:
   name: "LabAssistant"
-  # LangGraph 워크플로우 선택 ('single_agent_flow' 또는 'multi_agent_flow')
   flow: "single_agent_flow"
 
 llm:
@@ -11,6 +10,8 @@ llm:
   #  gpt-4o-mini, gemini-2.5-flash 등 모델 이름
   model: "gemini-2.5-flash"
   temperature: 0.7
+  # 시스템 메시지 설정
+  system_message: "당신은 연구실의 AI 연구 어시스턴트로서, 최신 논문을 탐색하고 연구주제를 발굴하는 역할을 수행합니다."
 
 memory:
   # 대화 기록을 저장할 방식 ('in_memory' 또는 'mem0')

@@ -13,8 +13,8 @@ except ImportError:
     pass  # 위에서 정의한 간단한 HumanMessage 사용
 
 class UserInputNode:
-    def __init__(self, agent_core):
-        self.agent_core = agent_core
+    def __init__(self, config):
+        self.config = config
     
     def process(self, state: Dict[str, Any]) -> Dict[str, Any]:
         try:

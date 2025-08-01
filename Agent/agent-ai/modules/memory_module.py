@@ -10,23 +10,20 @@ warnings.filterwarnings("ignore", category=DeprecationWarning, module="mem0")
 load_dotenv()
 
 class MemoryNode:
-    def __init__(self, agent_core):
-        self.agent_core = agent_core
-        self.config = agent_core.config.get('memory', {})
+    def __init__(self, config):
+        self.config = config.get('memory', {})
         
-        # 설정에서 메모리 옵션 읽기
+
         self.memory_type = self.config.get('type', 'in_memory')
         self.default_user_id = self.config.get('default_user_id', 'default_user')
         self.settings = self.config.get('settings', {})
         
-        # 메모리 설정값들
+
         self.search_limit = self.settings.get('search_limit', 5)
         self.history_limit = self.settings.get('history_limit', 50)
         self.auto_save = self.settings.get('auto_save', True)
-        self.expiry_time = self.settings.get('expiry_time', 0)
         self.compression_threshold = self.settings.get('compression_threshold', 1000)
         
-        # mem0 메모리 인스턴스 초기화
         self.memory = None
         if self.memory_type == 'mem0':
             self._initialize_memory()
@@ -40,9 +37,7 @@ class MemoryNode:
         print(f"   - 압축 임계값: {self.compression_threshold}")
         
     def _initialize_memory(self):
-        """mem0 메모리 초기화"""
         try:
-            # mem0 API 키 확인
             mem0_api_key = os.getenv("MEM0_API_KEY")
             
             if mem0_api_key and mem0_api_key != "your_mem0_api_key_here":

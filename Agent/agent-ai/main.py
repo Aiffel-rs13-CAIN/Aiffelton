@@ -1,12 +1,11 @@
+
 import os
 import yaml
 import re
 from dotenv import load_dotenv
 
 # 모듈 임포트
-from modules.agent_core import AgentCore
 from workflows.single_agent_flow import create_single_agent_workflow
-
 load_dotenv()
 
 def load_config(path):
@@ -27,21 +26,17 @@ def load_config(path):
 def main():
     config_path = os.path.join(os.path.dirname(__file__), 'config', 'config.yaml')
     config = load_config(config_path)
-    
-    agent_core = AgentCore(config)
-    
-    workflow = create_single_agent_workflow(agent_core)
-    
+
+    workflow = create_single_agent_workflow(config)
+
     print("에이전트를 시작합니다. (종료하려면 'exit')")
-    
-    # config에서 기본 사용자 ID 읽기
+
     memory_config = config.get('memory', {})
     user_id = memory_config.get('default_user_id', 'default_user')
-    
+
     print(f"👤 사용자 ID: {user_id}")
-    print("💡 멀티턴 대화가 가능합니다. 이전 대화 내용을 기억합니다.")
     print("-" * 50)
-    
+
     initial_state = {
         "messages": [],
         "context": "",
@@ -53,7 +48,6 @@ def main():
     }
 
     workflow.invoke(initial_state)
-        
 
 if __name__ == "__main__":
     main()

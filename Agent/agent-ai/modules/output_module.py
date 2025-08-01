@@ -1,8 +1,8 @@
 from typing import Dict, Any
 
 class OutputNode:
-    def __init__(self, agent_core):
-        self.agent_core = agent_core
+    def __init__(self, config):
+        self.config = config
     
     def process(self, state: Dict[str, Any]) -> Dict[str, Any]:
         messages = state.get("messages", [])
