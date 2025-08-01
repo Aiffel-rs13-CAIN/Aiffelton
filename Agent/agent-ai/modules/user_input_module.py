@@ -29,6 +29,7 @@ class UserInputNode:
             new_message = HumanMessage(content=user_input)
             
             return {
+                **state,  # 기존 상태 유지
                 "messages": current_messages + [new_message],
                 "should_exit": False
             }

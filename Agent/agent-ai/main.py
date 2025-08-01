@@ -34,12 +34,22 @@ def main():
     
     print("에이전트를 시작합니다. (종료하려면 'exit')")
     
+    # config에서 기본 사용자 ID 읽기
+    memory_config = config.get('memory', {})
+    user_id = memory_config.get('default_user_id', 'default_user')
+    
+    print(f"👤 사용자 ID: {user_id}")
+    print("💡 멀티턴 대화가 가능합니다. 이전 대화 내용을 기억합니다.")
+    print("-" * 50)
+    
     initial_state = {
         "messages": [],
         "context": "",
         "memory": {},
         "tool_results": [],
-        "should_exit": False
+        "should_exit": False,
+        "user_id": user_id,
+        "last_response": ""
     }
 
     workflow.invoke(initial_state)

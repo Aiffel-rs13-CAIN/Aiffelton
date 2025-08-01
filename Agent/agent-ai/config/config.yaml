@@ -7,15 +7,26 @@ agent:
 
 llm:
   # LLM 공급자 선택 ('google' 또는 'openai')
-  provider: "openai"
+  provider: "google"
   #  gpt-4o-mini, gemini-2.5-flash 등 모델 이름
-  model: "gpt-4o-mini"
+  model: "gemini-2.5-flash"
   temperature: 0.7
 
 memory:
-  # 대화 기록을 저장할 방식 ('redis' 또는 'in_memory')
-  type: "in_memory"
-  session_id: "default_session"
+  # 대화 기록을 저장할 방식 ('in_memory' 또는 'mem0')
+  type: "mem0"
+  # 기본 사용자 ID (각 사용자별로 독립적인 메모리 관리)
+  default_user_id: "blue_sea"
+  # 메모리 설정
+  settings:
+    # 검색 시 반환할 최대 메모리 개수
+    search_limit: 5
+    # 대화 기록 조회 시 반환할 최대 개수
+    history_limit: 50
+    # 메모리 자동 저장 여부
+    auto_save: true
+    # 메모리 압축 임계값 (메모리 개수가 이 값을 초과하면 압축)
+    compression_threshold: 1000
 
 tools:
   - tool: "rag_tool"

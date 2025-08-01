@@ -15,6 +15,8 @@ class AgentState(TypedDict):
     memory: dict = {} 
     tool_results: list = []
     should_exit: bool = False
+    user_id: str = "default_user"
+    last_response: str = ""
 
 def create_single_agent_workflow(agent_core):
     factory = WorkflowFactory(agent_core)
@@ -58,7 +60,14 @@ def create_single_agent_workflow(agent_core):
     # 도구 실행 후 다시 LLM으로
     workflow.add_edge("tools", "llm")
     
-    # 출력 후 다시 사용자 입력으로 (루프)
-    workflow.add_edge("output", "user_input")
+    # 출력 후 종료 여부 확인 (루프 제어)
+    workflow.add_conditional_edges(
+        "output",
+        factory.should_exit,
+        {
+            "exit": END,
+            "continue": "user_input"
+        }
+    )
     
     return workflow.compile()

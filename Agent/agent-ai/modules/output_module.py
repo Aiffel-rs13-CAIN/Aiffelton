@@ -15,5 +15,8 @@ class OutputNode:
             else:
                 print(f"에이전트: {str(last_message)}")
         
-        # 상태를 그대로 반환 (변경 없음)
-        return state
+        # 상태를 그대로 반환 (should_exit 포함)
+        return {
+            **state,
+            "should_exit": state.get("should_exit", False)
+        }
