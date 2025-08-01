@@ -52,3 +52,41 @@ pip install -r cleaned_requirements.txt
 python -V           # Python 3.11.13
 pip list | wc -l    # 설치된 패키지 수 확인
 ```
+
+---
+
+### 6️⃣ API 키 설정 (.env 파일 생성)
+
+프로젝트 실행을 위해서는 LangSmith, Google, OpenAI, Mem0 등의 API 키가 필요합니다.
+프로젝트 agnet-ai 디렉토리에 `.env` 파일을 생성하고 아래 내용을 입력하세요.
+
+```env
+LANGSMITH_API_KEY=lsv2_pXXXXXXXXXXXXXXXXX
+GOOGLE_API_KEY=AIzaSyXXXXXXXXXXXXXXXXX
+OPENAI_API_KEY=sk-pro-XXXXXXXXXXXXXXXXX
+MEM0_API_KEY=m0-pKIPOYwumXXXXXXXXXXXXXXXXX
+```
+
+| 환경변수          | 설명                               |
+| ----------------- | ---------------------------------- |
+| LANGSMITH_API_KEY | LangSmith 트래킹용 API 키          |
+| GOOGLE_API_KEY    | Google Gemini/Generative AI API 키 |
+| OPENAI_API_KEY    | OpenAI GPT 모델 API 키             |
+| MEM0_API_KEY      | Mem0 장기 메모리 서비스 API 키     |
+
+---
+
+### 7️⃣ 프로젝트 실행
+
+환경설정과 API 키 입력이 완료되면, 아래 명령어로 프로젝트를 실행할 수 있습니다.
+
+```bash
+# main.py 실행
+python main.py
+```
+
+프로그램 실행 시 콘솔에 다음과 같은 메시지가 출력되면 정상 동작 중입니다.
+
+```bash
+'Aiffelton Agent' 에이전트가 준비되었습니다. 질문을 입력하세요. (종료하려면 'exit' 입력)
+```
