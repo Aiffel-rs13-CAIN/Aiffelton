@@ -17,7 +17,7 @@ from .server_executor import A2AServerAgentExecutor
 
 AGENT_EXECUTOR_CLASSES = {
     "SummarizerAgentExecutor": A2AServerAgentExecutor,
-    #"RecorderAgentExecutor": RecorderAgentExecutor,
+    "RecorderAgentExecutor": A2AServerAgentExecutor,
     # "ExperimentAgentExecutor": ExperimentAgentExecutor, ...
 }
 

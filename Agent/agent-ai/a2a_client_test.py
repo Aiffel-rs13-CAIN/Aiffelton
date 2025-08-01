@@ -22,14 +22,18 @@ async def main() -> None:
 
     # 1. 설정 디렉터리에서 모든 A2A 서버 주소 로드
     config_dir ="config/a2a"
-    a2a_server_addresses = load_a2a_server_addresses_from_config_dir(config_dir)
-    if not a2a_server_addresses:
+    a2a_server_entries = load_a2a_server_addresses_from_config_dir(config_dir)
+    if not a2a_server_entries:
         print("❌ A2A 서버 주소가 없습니다.")
         return
 
     print("✅ 서버 목록:")
-    for url in a2a_server_addresses:
-        print("A2A Server URL:", url)
+    a2a_server_addresses = []
+    for entry in a2a_server_entries:
+        url = entry["url"]
+        name = entry["name"]
+        a2a_server_addresses.append(url)
+        print(f"A2A Server {name} : {url}")
 
     
     async with httpx.AsyncClient() as httpx_client:

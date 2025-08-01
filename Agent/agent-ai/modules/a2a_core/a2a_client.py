@@ -32,7 +32,7 @@ EXTENDED_AGENT_CARD_PATH = '/agent/authenticatedExtendedCard'
 TaskCallbackArg = Task | TaskStatusUpdateEvent | TaskArtifactUpdateEvent
 TaskUpdateCallback = Callable[[TaskCallbackArg, AgentCard], Task]
 
-
+a2a_client : Optional[A2AClientAgent] = None 
 
 class RemoteAgentConnections:
     """A class to hold the connections to the remote agents."""
@@ -97,19 +97,23 @@ class A2AClientAgent:
     def __init__(
         self,
         remote_agent_addresses: list[str],
-        http_client: httpx.AsyncClient,
+        http_client: httpx.AsyncClient | None = None,
         task_callback: TaskUpdateCallback | None = None,
+        auto_init: bool = True,
     ):
         self.task_callback = task_callback
-        self.httpx_client = http_client
+        self.httpx_client = http_client or httpx.AsyncClient()
         self.remote_agent_connections: dict[str, RemoteAgentConnections] = {}
         self.cards: dict[str, AgentCard] = {}
         self.agents: str = ''
-        loop = asyncio.get_running_loop()
-        loop.create_task(
-            self.init_remote_agent_addresses(remote_agent_addresses)
-        )
-
+        self.remote_agent_addresses = remote_agent_addresses
+        
+        if auto_init : 
+            loop = asyncio.get_running_loop()
+            loop.create_task(
+                self.init_remote_agent_addresses(remote_agent_addresses)
+            )
+            
 
     async def init_remote_agent_addresses(
         self, remote_agent_addresses: list[str]
