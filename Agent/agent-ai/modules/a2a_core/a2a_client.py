@@ -8,6 +8,7 @@ import uuid
 
 from uuid import uuid4
 from typing import Any
+from typing import Optional
 from a2a.client import A2ACardResolver, A2AClient
 from a2a.types import (
     AgentCard,
@@ -32,7 +33,13 @@ EXTENDED_AGENT_CARD_PATH = '/agent/authenticatedExtendedCard'
 TaskCallbackArg = Task | TaskStatusUpdateEvent | TaskArtifactUpdateEvent
 TaskUpdateCallback = Callable[[TaskCallbackArg, AgentCard], Task]
 
-a2a_client : Optional[A2AClientAgent] = None 
+
+
+from pydantic import BaseModel, HttpUrl
+class A2AServerEntry(BaseModel):
+    """A class to hold the information to the remote agents. """
+    name: str
+    url: HttpUrl
 
 class RemoteAgentConnections:
     """A class to hold the connections to the remote agents."""
@@ -96,7 +103,7 @@ class A2AClientAgent:
  
     def __init__(
         self,
-        remote_agent_addresses: list[str],
+        remote_agent_entries: list[A2AServerEntry],
         http_client: httpx.AsyncClient | None = None,
         task_callback: TaskUpdateCallback | None = None,
         auto_init: bool = True,
@@ -106,27 +113,31 @@ class A2AClientAgent:
         self.remote_agent_connections: dict[str, RemoteAgentConnections] = {}
         self.cards: dict[str, AgentCard] = {}
         self.agents: str = ''
-        self.remote_agent_addresses = remote_agent_addresses
+        self.remote_agent_entries = remote_agent_entries
         
         if auto_init : 
             loop = asyncio.get_running_loop()
             loop.create_task(
-                self.init_remote_agent_addresses(remote_agent_addresses)
+                self.init_remote_agents(self.remote_agent_entries)
             )
-            
+            #loop.create_task(
+            #   self.reconnect_loop()
+            #)  # 🔁 재시도 루프
 
-    async def init_remote_agent_addresses(
-        self, remote_agent_addresses: list[str]
+
+    async def init_remote_agents(
+        self, entries: list[A2AServerEntry]
     ):
         async with asyncio.TaskGroup() as task_group:
-            for address in remote_agent_addresses:
-                task_group.create_task(self.retrieve_card(address))
+            for entry in entries:
+                task_group.create_task(self.retrieve_card(entry))
         # The task groups run in the background and complete.
         # Once completed the self.agents string is set and the remote
         # connections are established
 
 
-    async def retrieve_card(self, address: str):
+    async def retrieve_card(self, entry: A2AServerEntry):
+        address = str(entry.url)
         card_resolver = A2ACardResolver(self.httpx_client, address)
         card = await card_resolver.get_agent_card()
         self.register_agent_card(card)
@@ -283,3 +294,7 @@ async def select_agent_by_capability(agent_urls, required_capability):
     print("No agent found with required capability")
     return None
 
+
+
+# global 
+a2a_client : Optional[A2AClientAgent] = None 

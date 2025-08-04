@@ -11,22 +11,38 @@ from a2a.types import (
     AgentSkill,
 )
 import httpx
+import os
 
 from .config_loader import load_a2a_config
+from .config_loader import get_server_list
 from .server_executor import A2AServerAgentExecutor
+from .server_executor import A2ACombinedAgentExecutor
+from .a2a_client import A2AServerEntry
 
 AGENT_EXECUTOR_CLASSES = {
-    "SummarizerAgentExecutor": A2AServerAgentExecutor,
+    "SummarizerAgentExecutor": A2ACombinedAgentExecutor,
     "RecorderAgentExecutor": A2AServerAgentExecutor,
     # "ExperimentAgentExecutor": ExperimentAgentExecutor, ...
 }
 
 def build_server_from_config(config_file:str) :
+    # 경로 분리
+    config_dir = os.path.dirname(config_file)
+    file_name = os.path.basename(config_file)
+    print(f"📁 config_dir: {config_dir}")
+    print(f"📄 file_name: {file_name}")
+
+    # 1. get my own server config 
     server_config = load_a2a_config(config_file)
-    app = build_agent_from_config(server_config)
+
+    # 2. get the otheres config
+    other_server_entries = get_server_list(config_dir, file_name)
+    
+    # 3. build server agent 
+    app = build_agent_from_config(server_config, other_server_entries)
     return server_config, app
 
-def build_agent_from_config(config: dict) -> tuple[str, A2AStarletteApplication]:
+def build_agent_from_config(config: dict, other_server_entries: list[A2AServerEntry]) -> tuple[str, A2AStarletteApplication]:
     host = config["host"]
     port = config["port"]
     url = f"http://{host}:{port}/"
@@ -52,7 +68,7 @@ def build_agent_from_config(config: dict) -> tuple[str, A2AStarletteApplication]
     executor_class_name = config["executorClass"]
     executor_params = config.get("executorParams", {})
     executor_class = AGENT_EXECUTOR_CLASSES[executor_class_name]
-    executor = executor_class(**executor_params)
+    executor = executor_class(**executor_params, remote_agent_entries=other_server_entries)
 
     # If executor has setup step
     if hasattr(executor, "setup"):
