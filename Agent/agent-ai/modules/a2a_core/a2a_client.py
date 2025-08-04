@@ -152,6 +152,22 @@ class A2AClientAgent:
             agent_info.append(json.dumps(ra))
         self.agents = '\n'.join(agent_info)
 
+    async def retrieve_card_by_name(self, name: str):
+        """
+        remote_agent_entries 목록에서 name으로 A2AServerEntry를 찾아
+        해당 entry에 대해 retrieve_card() 실행.
+        """
+        # self.remote_agent_entries가 존재하는지 확인
+        if not self.remote_agent_entries:
+            raise ValueError("⚠️ remote_agent_entries가 초기화되지 않았습니다.")
+
+        # name으로 entry 찾기
+        entry = next((e for e in self.remote_agent_entries if e.name == name), None)
+        if entry is None:
+            raise ValueError(f"❌ 이름이 '{name}'인 A2A 서버 엔트리를 찾을 수 없습니다.")
+
+        # retrieve_card 실행
+        await self.retrieve_card(entry)
 
     def list_remote_agents(self):
         """List the available remote agents you can use to delegate the task."""

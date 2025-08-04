@@ -113,14 +113,28 @@ class A2ACombinedAgentExecutor(AgentExecutor):
         # 3. 응답 전송
         await event_queue.enqueue_event(new_agent_text_message(response_text))
     
+    
     async def send_to_other(self, agent_name:str, user_text:str) -> None:
         
         if agent_name not in self.client_agent.remote_agent_connections:
             print(f"❌ 에이전트 '{agent_name}' 을 찾을 수 없습니다.")
             
-            # TODO : remote_server_enties에서 agent_name을 찾아서, 연결한다. 
-            #
-            return
+            # remote_server_enties에서 agent_name을 찾아서, 연결한다. 
+            try:
+                # remote_agent_entries에서 name으로 등록 시도
+                await self.client_agent.retrieve_card_by_name(agent_name)
+            except ValueError as e:
+                print(f"❌ 에이전트 연결 실패: {e}")
+                return
+            
+            # TODO : 바로 연결 돠니??
+
+            # 연결 성공 여부 재확인
+            if agent_name not in self.client_agent.remote_agent_connections:
+                print(f"❌ 에이전트 '{agent_name}' 연결 실패 (등록 후에도 연결 없음).")
+                return
+            else:
+                print(f"✅ 에이전트 '{agent_name}' 연결 완료.")
 
            
         response = await self.client_agent.send_message(agent_name, None, None, user_text)
