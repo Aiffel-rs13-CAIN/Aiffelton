@@ -5,6 +5,11 @@ import uuid
 from typing import Any
 from uuid import uuid4
 
+import sys
+import os
+# 상위 디렉토리 추가
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 from modules.a2a_core.a2a_client import A2AClientAgent
 from modules.a2a_core.config_loader import get_server_list
 
@@ -14,7 +19,7 @@ from modules.a2a_core.config_loader import get_server_list
 async def main() -> None:
 
     # 1. 설정 디렉터리에서 모든 A2A 서버 주소 로드
-    config_dir ="config/a2a"
+    config_dir ="../config/a2a"
     a2a_server_entries = get_server_list(config_dir)
    
 
@@ -32,9 +37,7 @@ async def main() -> None:
             print("  -", info["name"], ":", info["description"])
 
 
-        # new task 
-        task_id = str(uuid.uuid4())
-        context_id = str(uuid.uuid4())
+       
 
         # 4. sumarizer에 메시지 전송
         agent_name = "Summarize Agent"
@@ -42,9 +45,12 @@ async def main() -> None:
             print(f"❌ 에이전트 '{agent_name}' 을 찾을 수 없습니다.")
             return
 
+
+
         user_text = "A2A Client Test Message"
-        response = await a2a_client.send_message(agent_name, task_id, context_id, user_text)
-        print("Response:")
+   
+        response = await a2a_client.send_message(agent_name, user_text, task_id=None, context_id=None)
+        #response = await a2a_client.send_message(agent_name, user_text)
         if response : 
             for i, item in enumerate(response):
                 print(f"  Part {i + 1}:")

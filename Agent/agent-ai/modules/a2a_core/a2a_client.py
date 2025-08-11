@@ -183,7 +183,8 @@ class A2AClientAgent:
 
 
 
-    async def send_message(self, agent_name:str, task_id:str, context_id:str, user_text: str) -> Any:
+    async def send_message(self, agent_name:str, user_text: str, 
+                            task_id:Optional[str] = None, context_id:Optional[str] = None ) -> Any:
         """Sends a task either streaming (if supported) or non-streaming.
 
         This will send a message to the remote agent named agent_name.
@@ -207,21 +208,23 @@ class A2AClientAgent:
 
 
         # setting request message
-        if not task_id:
-            task_id = str(uuid.uuid4())
-        if not context_id:
-            context_id = str(uuid.uuid4())
+        #if not task_id:
+        #    task_id = str(uuid.uuid4())
+                        
+        #if not context_id:
+        #    context_id = str(uuid.uuid4())
+        #print(f"task_id={task_id}, context_id={context_id}")
        
-        message_id = str(uuid.uuid4())
+        #message_id = str(uuid.uuid4())
 
-        print(TextPart(text=user_text))
+        print(f"TextPart: {TextPart(text=user_text)}")
         request: MessageSendParams = MessageSendParams(
             id=str(uuid.uuid4()),
             message=Message(
                 role='user',
                 parts=[TextPart(text=user_text)],
-                #message_id=str(uuid.uuid4()),
-                **{"messageId": message_id},   # alias 이름으로 명시적 전달
+                message_id=str(uuid.uuid4()),
+                #**{"messageId": message_id},   # alias 이름으로 명시적 전달
                 context_id=context_id,
                 task_id=task_id
             ),
@@ -235,7 +238,8 @@ class A2AClientAgent:
         print("Response :", response.model_dump(mode='json', exclude_none=True))
 
         if isinstance(response, Message):
-            message_id = response.messageId
+            #message_id = response.messageId
+            message_id = response.message_id
             print(f"Message ID: {message_id}")
             return await self.convert_parts(response.parts)
         elif isinstance(response, Task):

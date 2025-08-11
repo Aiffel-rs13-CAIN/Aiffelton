@@ -1,7 +1,10 @@
 import uvicorn
 import asyncio
 import sys
+import os
 
+# 상위 디렉토리 추가
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from modules.a2a_core.server_factory import build_server_from_config
 
@@ -29,8 +32,6 @@ async def main(config_path: str):
     await server.serve()
 
     
-    # 서버 에이전트 실행 (비동기)
-    await server_agent(config_path)
 
 
 if __name__ == "__main__":

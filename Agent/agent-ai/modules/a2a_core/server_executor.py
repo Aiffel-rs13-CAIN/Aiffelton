@@ -3,12 +3,49 @@ import asyncio
 from a2a.server.agent_execution import AgentExecutor, RequestContext
 from a2a.server.events import EventQueue
 from a2a.utils import new_agent_text_message
+from a2a.types import (
+    AgentCard,
+    JSONRPCErrorResponse,
+    Message,
+    MessageSendParams,
+    MessageSendConfiguration,
+    SendMessageRequest,
+    SendStreamingMessageRequest,
+    Task,
+    TaskArtifactUpdateEvent,
+    TaskStatusUpdateEvent,
+    DataPart,
+    Part,
+    TextPart,
+)
+import uuid
+from uuid import uuid4
 
 from .a2a_client import A2AClientAgent
 from .a2a_client import A2AServerEntry
 from typing import Optional
 a2a_client : Optional[A2AClientAgent] = None 
 
+
+def create_new_text_message(
+        user_text:str, 
+        task_id:Optional[str] | None = None, 
+        context_id:Optional[str] | None = None ) :
+
+    message_id = str(uuid.uuid4())
+
+    print(f"TextPart: {TextPart(text=user_text)}")
+   
+    message=Message(
+                role='user',
+                parts=[TextPart(text=user_text)],
+                #message_id=str(uuid.uuid4()),
+                **{"messageId": message_id},   # alias 이름으로 명시적 전달
+                context_id=context_id,
+                task_id=task_id
+    )       
+
+    return message
 
 class A2AServerAgentExecutor(AgentExecutor):
 
@@ -28,7 +65,7 @@ class A2AServerAgentExecutor(AgentExecutor):
         # 1. get user input message 
         text = context.get_user_input()
         task = context.current_task
-        print("Text :", text)
+        print("Recv Text :", text)
 
         # 2. 
         # TODO : langgraph 에게 메시지 전송 
@@ -56,7 +93,7 @@ class A2AServerAgentExecutor(AgentExecutor):
             return
 
     
-        response = await a2a_client.send_message(agent_name, None, None, user_text)
+        response = await a2a_client.send_message(agent_name,user_text, task_id=None, context_id=None)
         print("Response:")
         if response : 
             for i, item in enumerate(response):
@@ -137,7 +174,7 @@ class A2ACombinedAgentExecutor(AgentExecutor):
                 print(f"✅ 에이전트 '{agent_name}' 연결 완료.")
 
            
-        response = await self.client_agent.send_message(agent_name, None, None, user_text)
+        response = await self.client_agent.send_message(agent_name, user_text, task_id=None, context_id=None)
         print("Response:")
         if response : 
             for i, item in enumerate(response):
