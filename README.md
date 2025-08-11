@@ -5,13 +5,13 @@
 
 ## 1️⃣ Python 버전 설정 (선택: pyenv 사용 시)
 
-프로젝트 권장 Python 버전: **3.11.13**
+프로젝트 권장 Python 버전: **3.13.2**
 
 ```bash
 # pyenv 설치된 경우
-pyenv install 3.11.13
-pyenv local 3.11.13   # 현재 디렉토리에 버전 적용
-python --version      # 3.11.13 확인
+pyenv install 3.13.2
+pyenv local 3.13.2   # 현재 디렉토리에 버전 적용
+python --version      # 3.13.2 확인
 ```
 
 ## 2️⃣ 가상환경 생성
@@ -49,7 +49,7 @@ pip install -r cleaned_requirements.txt
 ## 5️⃣ 설치 확인
 
 ```bash
-python -V           # Python 3.11.13
+python -V           # Python 3.13.2
 pip list | wc -l    # 설치된 패키지 수 확인
 ```
 
