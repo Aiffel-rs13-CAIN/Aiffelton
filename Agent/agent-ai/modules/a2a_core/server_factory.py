@@ -90,7 +90,7 @@ def build_agent_from_config(config: dict, other_server_entries: list[A2AServerEn
         http_handler=handler
     )
 
-    print(f"Starting {config["name"]} server on  http://{host}:{port}")
+    print(f"Starting {config['name']} server on  http://{host}:{port}")
     print(f"executorClass : {executor_class_name}:{executor_params}/")
 
     return app.build()
