@@ -36,3 +36,20 @@ tools:
     vector_store: "chroma"
     embedding_model: "text-embedding-004" # Google AI의 임베딩 모델
     collection_name: "lab_documents"
+
+# A2A 통신 설정
+a2a:
+  # A2A 통신 활성화 여부
+  enabled: true
+  # A2A 설정 파일들이 있는 디렉토리
+  config_dir: "config/a2a"
+  # A2A 통신 타임아웃 (초)
+  timeout: 15.0
+  # 사용 가능한 원격 에이전트들
+  remote_agents:
+    - name: "Summarize Agent"
+      description: "텍스트 요약 전문 에이전트"
+      auto_connect: true
+    - name: "Record Agent"
+      description: "대화 기록 및 저장 에이전트"
+      auto_connect: true

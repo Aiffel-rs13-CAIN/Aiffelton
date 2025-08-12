@@ -34,7 +34,7 @@ def create_single_agent_workflow(config_path: str = "config/config.yaml"):
     workflow.add_node("rag", factory.rag_node_func)
     workflow.add_node("llm", factory.llm_node_func)
     workflow.add_node("tools", factory.tool_node_func)
-    workflow.add_node("a2a", factory.a2a_node_func)
+    workflow.add_node("a2a_comm", factory.a2a_comm_node_func)
     workflow.add_node("output", factory.output_node_func)
     
     workflow.set_entry_point("user_input")
@@ -93,7 +93,7 @@ async def create_a2a_enabled_workflow(config_path: str = "config/config.yaml", a
     workflow.add_node("rag", factory.rag_node_func)
     workflow.add_node("llm", factory.llm_node_func)
     workflow.add_node("tools", factory.tool_node_func)
-    workflow.add_node("a2a", factory.a2a_node_func)
+    workflow.add_node("a2a_comm", factory.a2a_comm_node_func)
     workflow.add_node("output", factory.output_node_func)
     
     workflow.set_entry_point("user_input")
@@ -116,21 +116,21 @@ async def create_a2a_enabled_workflow(config_path: str = "config/config.yaml", a
     def should_use_a2a(state):
         """A2A 통신 사용 여부 결정"""
         if state.get("a2a_request"):
-            return "a2a"
+            return "a2a_comm"
         return factory.should_continue(state)
     
     workflow.add_conditional_edges(
         "llm",
         should_use_a2a,
         {
-            "a2a": "a2a",
+            "a2a_comm": "a2a_comm",
             "tools": "tools", 
             "end": "output"
         }
     )
     
     # A2A 통신 후 출력으로
-    workflow.add_edge("a2a", "output")
+    workflow.add_edge("a2a_comm", "output")
     
     # 도구 실행 후 다시 LLM으로
     workflow.add_edge("tools", "llm")
