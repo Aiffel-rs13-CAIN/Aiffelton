@@ -118,3 +118,5 @@ xxhash==3.5.0
 yarl==1.20.1
 zope.interface==7.2
 zstandard==0.23.0
+watchdog==4.0.2
+langchain-mcp-adapters==0.1.9
