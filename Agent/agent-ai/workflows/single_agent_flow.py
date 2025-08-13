@@ -17,6 +17,7 @@ class AgentState(TypedDict):
     should_exit: bool = False
     user_id: str = "default_user"
     last_response: str = ""
+    agent_manager: object = None  # A2A AgentManager 추가
     
 def create_single_agent_workflow(agent_core):
     """단일 에이전트 워크플로우 생성 (A2A 미포함 기본 플로우)"""
@@ -48,7 +49,7 @@ def create_single_agent_workflow(agent_core):
     workflow.add_edge("memory", "rag")
     workflow.add_edge("rag", "llm")
     
-    # LLM 후 도구 사용 여부 결정 (A2A 분기 없음)
+    # LLM 후 도구 사용 여부 결정
     workflow.add_conditional_edges(
         "llm",
         factory.should_continue,
@@ -58,17 +59,10 @@ def create_single_agent_workflow(agent_core):
         }
     )
     
-    # 도구 실행 후 다시 LLM으로
-    workflow.add_edge("tools", "llm")
+    # 도구 실행 후 바로 출력으로 (LLM을 거치지 않음 - Gemini 규칙 준수)
+    workflow.add_edge("tools", "output")
     
-    # 출력 후 종료 여부 확인 (루프 제어)
-    workflow.add_conditional_edges(
-        "output",
-        factory.should_exit,
-        {
-            "exit": END,
-            "continue": "user_input"
-        }
-    )
+    # 출력 후 종료 (사용자가 다시 시작할 때까지)
+    workflow.add_edge("output", END)
     
     return workflow.compile()
