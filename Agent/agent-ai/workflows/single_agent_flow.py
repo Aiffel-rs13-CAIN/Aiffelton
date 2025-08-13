@@ -17,8 +17,9 @@ class AgentState(TypedDict):
     should_exit: bool = False
     user_id: str = "default_user"
     last_response: str = ""
-
+    
 def create_single_agent_workflow(agent_core):
+    """단일 에이전트 워크플로우 생성 (A2A 미포함 기본 플로우)"""
     factory = WorkflowFactory(agent_core)
     
 
@@ -47,7 +48,7 @@ def create_single_agent_workflow(agent_core):
     workflow.add_edge("memory", "rag")
     workflow.add_edge("rag", "llm")
     
-    # LLM 후 도구 사용 여부 결정
+    # LLM 후 도구 사용 여부 결정 (A2A 분기 없음)
     workflow.add_conditional_edges(
         "llm",
         factory.should_continue,
