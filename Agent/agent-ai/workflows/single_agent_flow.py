@@ -46,32 +46,17 @@ def create_single_agent_workflow(agent_core):
 
     # 메모리 -> RAG -> LLM 순서로 진행 (MCP 도구는 LLM 이후로 이동)
     workflow.add_edge("memory", "rag")
-    workflow.add_edge("rag", "llm")
 
-    # ✅ LLM 후 조건부 분기: MCP 도구 우선 실행 (툴 콜링 이슈로 인한 임시 코드)
-    def decide_after_llm(state):
-        """LLM 후 다음 단계 결정 - 시간 관련 요청은 MCP 도구 우선"""
+    # ✅ RAG와 LLM 사이에 MCP 도구 결정 로직 추가
+    def decide_before_llm(state):
         messages = state.get("messages", [])
         if not messages:
             return "output"
 
-        # 원본 사용자 메시지에서 시간 관련 키워드 확인
-        user_messages = []
-        for msg in messages:
-            if hasattr(msg, 'type') and msg.type == 'human':
-                user_messages.append(msg)
-            elif hasattr(msg, 'content') and not hasattr(msg, 'tool_calls'):
-                # HumanMessage 클래스인 경우
-                if 'HumanMessage' in str(type(msg)):
-                    user_messages.append(msg)
+        last_user_msg = messages[0]  # 첫 번째 메시지가 사용자 메시지라고 가정
+        if hasattr(last_user_msg, 'content'):
+            content = str(last_user_msg.content).lower()
 
-        if user_messages:
-            last_user_msg = user_messages[-1]
-            content = ""
-            if hasattr(last_user_msg, 'content'):
-                content = str(last_user_msg.content).lower()
-
-            # 시간 관련 키워드 확인 (더 넓은 범위)
             time_keywords = [
                 '시간', '현재시간', '지금시간', '몇시', '시각',
                 'time', 'current time', 'what time',
@@ -84,28 +69,41 @@ def create_single_agent_workflow(agent_core):
                     print(f"🕒 시간 관련 키워드 '{keyword}' 감지, MCP 도구 실행")
                     return "mcp_tools"
 
-        # AI 메시지에 tool_calls가 있으면 기존 도구 사용
-        last_message = messages[-1]
-        if hasattr(last_message, 'tool_calls') and last_message.tool_calls:
-            return "tools"
-
-        return "output"
+        # 시간 관련 키워드가 없으면 LLM으로 진행
+        return "llm"
 
     workflow.add_conditional_edges(
-        "llm",
-        decide_after_llm,
+        "rag",  # RAG 노드 다음에 조건부 엣지 추가
+        decide_before_llm,
         {
-            "tools": "tools",
+            "mcp_tools": "mcp_tools",
+            "llm": "llm"
+        }
+    )
+
+    # LLM 노드 후에는 툴 호출이 없으면 바로 출력으로 이동
+    def decide_after_llm_simplified(state):
+        """LLM 후 다음 단계 결정 - 시간 관련 요청은 MCP 도구 우선"""
+        messages = state.get("messages", [])
+        if hasattr(messages[-1], 'tool_calls') and messages[-1].tool_calls:
+            return "mcp_tools"  # LLM이 툴 호출을 결정했다면 다시 mcp_tools로
+        return "output"
+
+    # LLM 노드의 조건부 엣지 수정
+    workflow.add_conditional_edges(
+        "llm",
+        decide_after_llm_simplified,
+        {
             "mcp_tools": "mcp_tools",
             "output": "output"
         }
     )
 
-    # 도구 실행 후 다시 LLM으로 (기존 도구)
-    workflow.add_edge("tools", "llm")
+    # 툴 실행 후 LLM으로 돌아가기
+    workflow.add_edge("mcp_tools", "llm")
 
-    # MCP 도구 실행 후 출력으로 직접 이동
-    workflow.add_edge("mcp_tools", "output")
+    # ✅ LLM의 최종 응답은 출력으로 이동
+    workflow.add_edge("llm", "output")
 
     # 출력 후 종료 여부 확인 (루프 제어)
     workflow.add_conditional_edges(

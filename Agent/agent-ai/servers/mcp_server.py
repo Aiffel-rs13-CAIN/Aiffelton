@@ -10,6 +10,8 @@ from datetime import datetime, timezone
 from zoneinfo import ZoneInfo  # Python 3.9+
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
+import importlib
+import types
 
 # UTF-8
 if hasattr(sys.stdout, "reconfigure"):
@@ -43,38 +45,106 @@ def _log(msg: str):
 # -------------------------------
 # Dynamic Tool Execution Engine (툴 실행기)
 # -------------------------------
+# mcp_server.py (또는 해당 클래스가 있는 파일)
+import importlib
+import types
+
 class DynamicToolExecutor:
-    """완전히 동적인 도구 실행 엔진"""
+    """완전히 동적인 도구 실행 엔진 (안전한 import 포함)"""
 
     def __init__(self):
-        self.safe_builtins = {
-            # 안전한 내장 함수들
+        # 허용할 내장함수(필요한 것만 최소로)
+        self.safe_builtin_names = {
             'len', 'str', 'int', 'float', 'bool', 'list', 'dict', 'tuple', 'set',
             'min', 'max', 'sum', 'abs', 'round', 'sorted', 'reversed',
-            'range', 'enumerate', 'zip', 'map', 'filter',
-            'print'  # 디버깅용
+            'range', 'enumerate', 'zip', 'map', 'filter', 'print',
+            # 예외 클래스 몇 개는 실용상 허용
+            'Exception', 'ValueError', 'TypeError', 'RuntimeError'
         }
 
+        # 화이트리스트 모듈과 노출 허용 심볼
         self.safe_modules = {
             'datetime': ['datetime', 'timezone', 'timedelta'],
             'zoneinfo': ['ZoneInfo'],
+            'time': ['time', 'sleep', 'ctime', 'gmtime', 'localtime', 'mktime', 'strftime', 'strptime'],  # 추가
             'math': ['sin', 'cos', 'tan', 'sqrt', 'pow', 'log', 'exp', 'pi', 'e'],
             'random': ['random', 'randint', 'choice', 'shuffle'],
             'json': ['loads', 'dumps'],
-            're': ['match', 'search', 'findall', 'sub', 'split'],
-            'requests': ['get', 'post', 'put', 'delete'],
+            're': ['match', 'search', 'findall', 'sub', 'split', 'compile'],
             'subprocess': ['run', 'PIPE'],
             'pathlib': ['Path'],
             'os': ['getenv', 'listdir', 'getcwd'],
+            # 'requests': ['get', 'post', 'put', 'delete'],
         }
+
+    # --- 내부: 모듈 접근을 제한하는 프록시 ---
+    class _ModuleProxy(types.ModuleType):
+        def __init__(self, real_module, allowed_names):
+            super().__init__(real_module.__name__)
+            self.__dict__['_real_module'] = real_module
+            self.__dict__['_allowed'] = set(allowed_names)
+
+        def __getattr__(self, name):
+            if name in self._allowed:
+                return getattr(self._real_module, name)
+            raise AttributeError(f"Access to '{name}' is not allowed in module '{self._real_module.__name__}'")
+
+        # dir() 호출 시에도 허용된 것만 보이도록
+        def __dir__(self):
+            return sorted(self._allowed)
+
+    def _restricted_import(self, name, globals=None, locals=None, fromlist=(), level=0):
+        """
+        화이트리스트 기반 제한 import:
+        - 상대(import level != 0) 금지
+        - 모듈 루트가 화이트리스트에 있어야 함
+        - from ... import ... 시, 심볼도 화이트리스트 확인
+        """
+        if level != 0:
+            raise ImportError("Relative imports are not allowed")
+
+        root = name.split('.')[0]
+        if root not in self.safe_modules:
+            raise ImportError(f"Module '{root}' is not permitted")
+
+        # 실제 모듈 import
+        module = importlib.import_module(root)
+
+        # 허용된 심볼만 노출하는 프록시 래핑
+        proxy = self._ModuleProxy(module, self.safe_modules[root])
+
+        # fromlist가 있어도 proxy를 반환(프록시가 접근을 차단함)
+        # 단, fromlist 유효성도 사전에 체크
+        if fromlist:
+            for item in fromlist:
+                if item not in self.safe_modules[root]:
+                    raise ImportError(f"Symbol '{item}' is not permitted from module '{root}'")
+        return proxy
 
     def create_safe_globals(self):
         """안전한 실행 환경 생성"""
+        # __builtins__는 dict 혹은 module일 수 있음
+        builtins_obj = __builtins__ if isinstance(__builtins__, dict) else __builtins__.__dict__
+        safe_builtins = {name: builtins_obj[name]
+                         for name in self.safe_builtin_names
+                         if name in builtins_obj}
+
+        # 🔐 제한된 __import__ 주입 (여기가 핵심)
+        safe_builtins['__import__'] = self._restricted_import
+
         safe_globals = {
-            '__builtins__': {name: getattr(__builtins__, name)
-                             for name in self.safe_builtins
-                             if hasattr(__builtins__, name)}
+            '__builtins__': safe_builtins
         }
+        return safe_globals
+
+    # 예시: 동적 코드 실행 (exec/eval 등)
+    def exec_code(self, user_code: str, local_vars=None):
+        if local_vars is None:
+            local_vars = {}
+        safe_globals = self.create_safe_globals()
+        exec(user_code, safe_globals, local_vars)
+        return local_vars
+
 
         # 안전한 모듈들 임포트
         for module_name, allowed_attrs in self.safe_modules.items():

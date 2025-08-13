@@ -1,5 +1,6 @@
-# agent-ai/modules/tool_module.py
 import asyncio
+import sys
+import os
 from typing import Dict, Any, List
 from .mcp_module import DynamicMCPManager
 
@@ -26,22 +27,21 @@ class ToolNode:
         if ToolNode._manager is None:
             ToolNode._manager = DynamicMCPManager(cfg_path)
 
+        # ✅ 수정: __init__ 메서드에서 비동기 루프 관련 로직을 모두 제거합니다.
+        # DynamicMCPManager의 시작은 main.py의 메인 루프에서 담당하도록 합니다.
         if not ToolNode._started:
-            # 별도 이벤트 루프 생성 후 동기 대기로 초기화 보장
             try:
                 loop = asyncio.get_event_loop()
-                if loop.is_running():
-                    # 이미 러닝 루프가 있다면, 임시 새 루프에서 실행
-                    loop = asyncio.new_event_loop()
-                    loop.run_until_complete(ToolNode._manager.start())
-                    loop.close()
-                else:
-                    loop.run_until_complete(ToolNode._manager.start())
             except RuntimeError:
-                # get_event_loop 실패 시 새 루프 생성
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
+
+            if loop.is_running():
+                tmp_loop = asyncio.new_event_loop()
+                tmp_loop.run_until_complete(ToolNode._manager.start())
+            else:
                 loop.run_until_complete(ToolNode._manager.start())
+
             ToolNode._started = True
 
     def process(self, state: Dict[str, Any]) -> Dict[str, Any]:
@@ -53,8 +53,11 @@ class ToolNode:
         if not messages:
             return {**state, "tool_results": state.get("tool_results", [])}
 
-        # ✅ ainvoke_messages를 동기 실행 - ReAct 에이전트가 도구 사용을 자율 결정
+        # ✅ new_messages 변수를 미리 선언합니다.
+        new_messages = []
+
         try:
+            print("DEBUG: ainvoke_messages 호출 전. 입력 메시지:", messages)
             loop = asyncio.get_event_loop()
             if loop.is_running():
                 # 러닝 루프에서는 별도 임시 루프 사용
@@ -62,11 +65,11 @@ class ToolNode:
                 new_messages = tmp.run_until_complete(
                     ToolNode._manager.ainvoke_messages(messages)
                 )
-                tmp.close()
             else:
                 new_messages = loop.run_until_complete(
                     ToolNode._manager.ainvoke_messages(messages)
                 )
+            print("DEBUG: ainvoke_messages 호출 후. 반환된 메시지:", new_messages)
         except RuntimeError:
             # 루프가 없으면 새로 만들어 실행
             tmp = asyncio.new_event_loop()
@@ -74,14 +77,39 @@ class ToolNode:
             new_messages = tmp.run_until_complete(
                 ToolNode._manager.ainvoke_messages(messages)
             )
+            print("DEBUG: ainvoke_messages 호출 후. 반환된 메시지 (예외 처리):", new_messages)
+
+        # -------------------------------------------------------------------
+        # ✅ 여기부터는 new_messages 변수가 항상 유효하도록 보장됨
+        # -------------------------------------------------------------------
 
         # tool_results에 MCP agent 실행 흔적 남기기
         tool_results = state.get("tool_results", [])
+
+        # ✅ ToolMessage에 오류가 있는지 확인하고 상태에 반영
+        has_error = False
+        for msg in new_messages:
+            if hasattr(msg, 'status') and msg.status == 'error':
+                print(f"DEBUG: 툴 실행 오류 감지! 메시지: {msg.content}")
+                has_error = True
+                tool_results.append({
+                    "tool": "mcp_react_agent",
+                    "result": "execution_failed",
+                    "error_message": msg.content
+                })
+                # 오류 발생 시 더 이상 진행하지 않고 상태를 반환
+                return {
+                    **state,
+                    "messages": new_messages,
+                    "tool_results": tool_results,
+                    "should_exit": True  # 워크플로우에 따라 적절히 변경 필요
+                }
 
         # ✅ 사용된 도구들을 감지해서 기록
         used_tools = []
         for msg in new_messages:
             if hasattr(msg, 'tool_calls') and msg.tool_calls:
+                print(f"DEBUG: 'tool_calls' 감지! 메시지 내용: {msg}")
                 for tool_call in msg.tool_calls:
                     used_tools.append(tool_call.get('name', 'unknown_tool'))
 
