@@ -21,7 +21,7 @@ from .a2a_client import A2AServerEntry
 
 AGENT_EXECUTOR_CLASSES = {
     "SummarizerAgentExecutor": A2ACombinedAgentExecutor,
-    "RecorderAgentExecutor": A2AServerAgentExecutor,
+    "RecorderAgentExecutor": A2AServerAgentExecutor, # 서버 에이전트 익스큐터만 사용해서
     # "ExperimentAgentExecutor": ExperimentAgentExecutor, ...
 }
 

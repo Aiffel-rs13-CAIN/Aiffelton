@@ -36,3 +36,15 @@ tools:
     vector_store: "chroma"
     embedding_model: "text-embedding-004" # Google AI의 임베딩 모델
     collection_name: "lab_documents"
+
+# A2A 서버/클라이언트 설정
+a2a:
+  # 시작할 서버 목록 (config/a2a/*.json의 name 필드와 일치)
+  start_servers: ["Summarize Agent", "Recorder Agent"]
+  # 서버에 클라이언트 주입 여부
+  attach_client_to_server: true
+  # 클라이언트 설정
+  client:
+    enabled: true
+    # 자신의 서버 설정 파일 제외 (옵션)
+    except_file: null
