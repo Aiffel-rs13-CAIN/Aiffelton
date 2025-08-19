@@ -1,5 +1,7 @@
 import os
 import asyncio
+import json
+from datetime import datetime
 from a2a.server.agent_execution import AgentExecutor, RequestContext
 from a2a.server.events import EventQueue
 from a2a.utils import new_agent_text_message
@@ -24,6 +26,15 @@ from uuid import uuid4
 from .a2a_client import A2AClientAgent
 from .a2a_client import A2AServerEntry
 from typing import Optional
+
+# Agent LLM Handler 임포트
+try:
+    from ..agent_llm_handler import get_agent_llm_handler
+    LLM_AVAILABLE = True
+except ImportError:
+    print("⚠️ Agent LLM Handler를 사용할 수 없습니다. 기본 응답을 사용합니다.")
+    LLM_AVAILABLE = False
+
 a2a_client : Optional[A2AClientAgent] = None 
 
 
@@ -49,9 +60,11 @@ def create_new_text_message(
 
 class A2AServerAgentExecutor(AgentExecutor):
 
-    def __init__(self, remote_agent_entries: list[A2AServerEntry]):
-        # initiaize 
-        print()
+    def __init__(self, remote_agent_entries: list[A2AServerEntry], agent_name: str = None, **kwargs):
+        # 에이전트 이름 저장
+        self.agent_name = agent_name or "Unknown Agent"
+        self.remote_agent_entries = remote_agent_entries
+        print(f"🤖 {self.agent_name} 실행기 초기화 완료")
 
     async def execute(
         self,
@@ -62,27 +75,91 @@ class A2AServerAgentExecutor(AgentExecutor):
         rcvRequest = context._params
         print("Request :", rcvRequest.model_dump(mode='json', exclude_none=False))
         print()
-        # 1. get user input message 
+        
+        # 1. 사용자 입력 메시지 받기
         text = context.get_user_input()
         task = context.current_task
-        print("Recv Text :", text)
-
-        # 2. 
-        # TODO : langgraph 에게 메시지 전송 
-        # TODO : task state 관리 
-
-        # TEST {
-        if a2a_client : 
-            agent_name = "Recorder Agent"
-            user_text = "A2A Client Test Message to Recoder Agent "
-            await self.send_to_other(agent_name, user_text)
-        #asyncio.create_task(send_to_recoder())  # ✅ 백그라운드 실행
-        # TEST }
-
-
-        # 3. 응답 전송
-        response_text = "test response"
+        print(f"📨 수신된 메시지: {text}")
+        
+        # 2. 에이전트 이름 확인
+        agent_name = self.agent_name
+        print(f"🤖 에이전트: {agent_name}")
+        
+        # 3. LLM으로 응답 생성
+        response_text = await self._generate_llm_response(agent_name, text)
+        
+        # 4. 특별한 처리 (에이전트별 로직)
+        await self._handle_agent_specific_logic(agent_name, text, response_text)
+        
+        # 5. 응답 전송
         await event_queue.enqueue_event(new_agent_text_message(response_text))
+        print(f"📤 응답 전송 완료: {response_text[:100]}...")
+    
+    def _get_agent_name_from_context(self, context: RequestContext) -> str:
+        """컨텍스트에서 에이전트 이름 추출 (더 이상 사용하지 않음)"""
+        return self.agent_name
+    
+    async def _generate_llm_response(self, agent_name: str, user_message: str) -> str:
+        """LLM을 사용하여 응답 생성"""
+        if not LLM_AVAILABLE:
+            return f"[{agent_name}] 기본 응답: {user_message}을(를) 받았습니다."
+        
+        try:
+            # 에이전트별 LLM 핸들러 가져오기
+            llm_handler = get_agent_llm_handler(agent_name)
+            
+            # LLM으로 응답 생성
+            response = await llm_handler.process_message(user_message)
+            
+            return response
+            
+        except Exception as e:
+            print(f"❌ {agent_name} LLM 응답 생성 실패: {e}")
+            return f"[{agent_name}] 죄송합니다. 현재 응답을 생성할 수 없습니다."
+    
+    async def _handle_agent_specific_logic(self, agent_name: str, user_message: str, response: str):
+        """에이전트별 특별한 로직 처리"""
+        try:
+            if "Recorder" in agent_name:
+                # Recorder Agent: 데이터 저장
+                await self._save_to_database(user_message, response)
+                
+            elif "Summarize" in agent_name:
+                # Summarize Agent: 요약 결과를 Recorder Agent에게 전송
+                if a2a_client:
+                    forward_message = f"요약 결과: {response}"
+                    await self.send_to_other("Recorder Agent", forward_message)
+                    
+        except Exception as e:
+            print(f"⚠️ {agent_name} 특별 로직 처리 실패: {e}")
+    
+    async def _save_to_database(self, input_text: str, response: str):
+        """데이터베이스에 저장 (Recorder Agent용)"""
+        try:
+            # 데이터 저장 로직
+            timestamp = datetime.now().isoformat()
+            record = {
+                "timestamp": timestamp,
+                "input": input_text,
+                "response": response,
+                "agent": "Recorder Agent"
+            }
+            
+            # 파일로 저장 (임시)
+            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            save_dir = os.path.join(base_dir, "data", "recorder_memory")
+            os.makedirs(save_dir, exist_ok=True)
+            
+            filename = f"record_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+            filepath = os.path.join(save_dir, filename)
+            
+            with open(filepath, 'w', encoding='utf-8') as f:
+                json.dump(record, f, ensure_ascii=False, indent=2)
+            
+            print(f"💾 데이터 저장 완료: {filepath}")
+            
+        except Exception as e:
+            print(f"❌ 데이터 저장 실패: {e}")
     
     async def send_to_other(agent_name:str, user_text:str) -> None:
         if a2a_client is None:
@@ -112,11 +189,11 @@ class A2AServerAgentExecutor(AgentExecutor):
 
 class A2ACombinedAgentExecutor(AgentExecutor):
 
-    def __init__(self,
-        remote_agent_entries: list[A2AServerEntry]):
-
+    def __init__(self, remote_agent_entries: list[A2AServerEntry], agent_name: str = None, **kwargs):
+        # 에이전트 이름 저장
+        self.agent_name = agent_name or "Unknown Agent"
         self.client_agent = A2AClientAgent(remote_agent_entries)
-        
+        print(f"🤖 {self.agent_name} Combined 실행기 초기화 완료")
         
     async def execute(
         self,
@@ -127,28 +204,55 @@ class A2ACombinedAgentExecutor(AgentExecutor):
         rcvRequest = context._params
         print("Request :", rcvRequest.model_dump(mode='json', exclude_none=False))
         print()
-        # 1. get user input message 
+        
+        # 1. 사용자 입력 메시지 받기
         text = context.get_user_input()
         task = context.current_task
-        print("Text :", text)
-
-        # 2. 
-        # TODO : langgraph 에게 메시지 전송 
-        # TODO : task state 관리 
-
-        # TEST {
-        if self.client_agent : 
-            agent_name = "Recorder Agent"
-            user_text = "A2A Client Test Message to Recoder Agent "
-            await self.send_to_other(agent_name, user_text)
-      
-
-        response_text = "test response"
-        # TORO : 
-
-
-        # 3. 응답 전송
+        print(f"📨 수신된 메시지: {text}")
+        
+        # 2. 에이전트 이름 확인
+        agent_name = self.agent_name
+        print(f"🤖 에이전트: {agent_name}")
+        
+        # 3. LLM으로 응답 생성
+        response_text = await self._generate_llm_response(agent_name, text)
+        
+        # 4. 특별한 처리 (에이전트별 로직)
+        await self._handle_agent_specific_logic(agent_name, text, response_text)
+        
+        # 5. 응답 전송
         await event_queue.enqueue_event(new_agent_text_message(response_text))
+        print(f"📤 응답 전송 완료: {response_text[:100]}...")
+    
+    async def _generate_llm_response(self, agent_name: str, user_message: str) -> str:
+        """LLM을 사용하여 응답 생성"""
+        if not LLM_AVAILABLE:
+            return f"[{agent_name}] 기본 응답: {user_message}을(를) 받았습니다."
+        
+        try:
+            # 에이전트별 LLM 핸들러 가져오기
+            llm_handler = get_agent_llm_handler(agent_name)
+            
+            # LLM으로 응답 생성
+            response = await llm_handler.process_message(user_message)
+            
+            return response
+            
+        except Exception as e:
+            print(f"❌ {agent_name} LLM 응답 생성 실패: {e}")
+            return f"[{agent_name}] 죄송합니다. 현재 응답을 생성할 수 없습니다."
+    
+    async def _handle_agent_specific_logic(self, agent_name: str, user_message: str, response: str):
+        """에이전트별 특별한 로직 처리"""
+        try:
+            if "Summarize" in agent_name:
+                # Summarize Agent: 요약 결과를 Recorder Agent에게 전송
+                if self.client_agent:
+                    forward_message = f"요약 결과: {response}"
+                    await self.send_to_other("Recorder Agent", forward_message)
+                    
+        except Exception as e:
+            print(f"⚠️ {agent_name} 특별 로직 처리 실패: {e}")
     
     
     async def send_to_other(self, agent_name:str, user_text:str) -> None:

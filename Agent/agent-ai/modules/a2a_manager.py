@@ -61,6 +61,30 @@ class A2AManager:
             print(f"  ⏳ 서버 준비 대기 중... (3초)")
             await asyncio.sleep(3)
 
+    async def start_specific_server(self, server_name: str) -> bool:
+        """특정 A2A 서버만 시작합니다"""
+        try:
+            server = A2AServerModule()
+            if server.start_by_name(server_name, self.config_dir):
+                self._servers.append(server)
+                print(f"  ✅ 서버 시작됨: {server_name}")
+                
+                # 서버 준비 대기
+                print(f"  ⏳ 서버 준비 대기 중... (3초)")
+                await asyncio.sleep(3)
+                
+                # 무한 대기 (서버 유지)
+                print(f"  🔄 {server_name} 서버 실행 중...")
+                while True:
+                    await asyncio.sleep(1)
+                    
+            else:
+                print(f"  ⚠️ 서버 시작 실패: {server_name}")
+                return False
+        except Exception as e:
+            print(f"  ❌ 서버 오류 ({server_name}): {e}")
+            return False
+
     async def _initialize_client(self) -> None:
         """A2A 클라이언트를 초기화합니다"""
         try:

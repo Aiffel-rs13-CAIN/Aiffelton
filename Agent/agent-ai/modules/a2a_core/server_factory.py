@@ -68,6 +68,9 @@ def build_agent_from_config(config: dict, other_server_entries: list[A2AServerEn
     executor_class_name = config["executorClass"]
     executor_params = config.get("executorParams", {})
     executor_class = AGENT_EXECUTOR_CLASSES[executor_class_name]
+    
+    # 에이전트 이름을 executor에 전달
+    executor_params["agent_name"] = config["name"]
     executor = executor_class(**executor_params, remote_agent_entries=other_server_entries)
 
     # If executor has setup step
