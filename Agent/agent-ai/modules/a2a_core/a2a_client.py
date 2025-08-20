@@ -1,3 +1,4 @@
+from re import A
 import httpx
 import asyncio
 import os
@@ -18,8 +19,10 @@ from a2a.types import (
     MessageSendConfiguration,
     SendMessageRequest,
     SendStreamingMessageRequest,
-    Task,
+    SendStreamingMessageSuccessResponse,
     TaskArtifactUpdateEvent,
+    Task,
+    TaskState,
     TaskStatusUpdateEvent,
     DataPart,
     Part,
@@ -64,12 +67,36 @@ class RemoteAgentConnections:
             async for response in self.agent_client.send_message_streaming(
                 SendStreamingMessageRequest(id=str(uuid4()), params=request)
             ):
-                if not response.root.result:
-                    return response.root.error
-                # In the case a message is returned, that is the end of the interaction.
-                event = response.root.result
-                if isinstance(event, Message):
-                    return event
+                print(f"응답 수신: {response}")
+
+                # 실패 응답인 경우
+                if hasattr(response, "root") and hasattr(response.root, "error"):
+                    return response.root.error                              
+
+                # BEGIN - 2025.08.20 task 관리 {              
+                # 성공 응답인 경우 
+                elif isinstance(response.root, SendStreamingMessageSuccessResponse) : 
+                    event = response.root.result
+
+                    if isinstance(event, Task):
+                        print(f"📌 Task 수신")
+                        continue
+                    elif isinstance(event, TaskStatusUpdateEvent):
+                        print(f"🔄 Task 상태 업데이트 ") 
+                        continue 
+                    elif isinstance(event, TaskArtifactUpdateEvent):
+                        artifact = event.artifact
+                        print(f"📥 아티팩트 수신 ")
+                        return event
+                    # In the case a message is returned, that is the end of the interaction.
+                    if isinstance(event, Message):
+                        print(f"💬 메시지 수신 ")
+                        return event
+                else:
+                    print(f"⚠️ 알 수 없는 응답 수신: {response}")
+                    return None
+                # END - 2025.08.20 task 관리}
+                
 
                 # Otherwise we are in the Task + TaskUpdate cycle.
                 if task_callback and event:
@@ -238,10 +265,17 @@ class A2AClientAgent:
         print("Response :", response.model_dump(mode='json', exclude_none=True))
 
         if isinstance(response, Message):
-            #message_id = response.messageId
             message_id = response.message_id
             print(f"Message ID: {message_id}")
             return await self.convert_parts(response.parts)
+        elif hasattr(response, 'artifact') and response.artifact:
+            # artifact-update 타입 처리
+            result = []
+            artifact = response.artifact
+            if hasattr(artifact, 'parts') and artifact.parts:
+                result.extend(await self.convert_parts(artifact.parts))
+            #print(f"artifact result: {result}")
+            return result
         elif isinstance(response, Task):
             task: Task = response
             # TODO : task state 관리 
@@ -258,7 +292,9 @@ class A2AClientAgent:
                     result.extend(
                         await self.convert_parts(artifact.parts)
                     )
+                print(f"artifact result: {result}")
             return result
+       
 
         
     async def convert_parts(self, parts: list[Part]):
@@ -269,6 +305,10 @@ class A2AClientAgent:
 
 
     async def convert_part(self, part: Part):
+        if not part or not part.root:
+            print("⚠️ part 또는 part.root가 None입니다.")
+            return ""
+
         if part.root.kind == 'text':
             return part.root.text
         if part.root.kind == 'data':

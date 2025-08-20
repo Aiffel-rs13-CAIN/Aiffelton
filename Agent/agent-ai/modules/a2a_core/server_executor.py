@@ -4,7 +4,11 @@ import json
 from datetime import datetime
 from a2a.server.agent_execution import AgentExecutor, RequestContext
 from a2a.server.events import EventQueue
-from a2a.utils import new_agent_text_message
+from a2a.server.tasks import TaskUpdater
+from a2a.utils import (
+    new_agent_text_message,
+    new_task,
+)
 from a2a.types import (
     AgentCard,
     JSONRPCErrorResponse,
@@ -84,15 +88,33 @@ class A2AServerAgentExecutor(AgentExecutor):
         # 2. 에이전트 이름 확인
         agent_name = self.agent_name
         print(f"🤖 에이전트: {agent_name}")
+
+        # BEGIN - 2025.08.20 task 관리 {
+        if not task : 
+            task = new_task(context.message) 
+            await event_queue.enqueue_event(task)  # task 전송 
+        
+        updater = TaskUpdater(event_queue, task.id, task.context_id)
+        # END - 2025.08.20 task 관리 }
+
         
         # 3. LLM으로 응답 생성
         response_text = await self._generate_llm_response(agent_name, text)
-        
+      
         # 4. 특별한 처리 (에이전트별 로직)
         await self._handle_agent_specific_logic(agent_name, text, response_text)
         
         # 5. 응답 전송
-        await event_queue.enqueue_event(new_agent_text_message(response_text))
+        # BEGIN - 2025.08.20 task 관리 {
+        part = TextPart(text=response_text)
+        await updater.add_artifact(
+            parts = [Part(root=part)],
+            name = f'{agent_name}-result'
+        )
+        await updater.complete()
+        
+        #await event_queue.enqueue_event(new_agent_text_message(response_text))
+        # END - 2025.08.20 task 관리}
         print(f"📤 응답 전송 완료: {response_text[:100]}...")
     
     def _get_agent_name_from_context(self, context: RequestContext) -> str:
