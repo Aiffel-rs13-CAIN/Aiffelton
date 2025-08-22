@@ -29,8 +29,10 @@ from a2a.types import (
     TextPart,
 )
 from collections.abc import Callable
+#from google.generativeai import types
+#from google.genai import types
 
-PUBLIC_AGENT_CARD_PATH = '/.well-known/agent.json'
+PUBLIC_AGENT_CARD_PATH = '/.well-known/agent_card.json'
 EXTENDED_AGENT_CARD_PATH = '/agent/authenticatedExtendedCard'
 
 TaskCallbackArg = Task | TaskStatusUpdateEvent | TaskArtifactUpdateEvent
@@ -62,7 +64,7 @@ class RemoteAgentConnections:
         task_callback: TaskUpdateCallback | None,
     ) -> Task | Message | None:
         if self.card.capabilities.streaming:
-            task = None
+            task: Task = None
             print("send_message : streaming")
             async for response in self.agent_client.send_message_streaming(
                 SendStreamingMessageRequest(id=str(uuid4()), params=request)
@@ -82,14 +84,19 @@ class RemoteAgentConnections:
                         print(f"📌 Task 수신")
                         continue
                     elif isinstance(event, TaskStatusUpdateEvent):
-                        print(f"🔄 Task 상태 업데이트 ") 
-                        continue 
+                        task = event
+                        if task.status.state == TaskState.failed : 
+                            print(f"🔄 Task 상태 실패 ")
+                            return task
+                        else : 
+                            print(f"🔄 Task 상태 업데이트 ") 
+                            continue 
                     elif isinstance(event, TaskArtifactUpdateEvent):
                         artifact = event.artifact
                         print(f"📥 아티팩트 수신 ")
                         return event
                     # In the case a message is returned, that is the end of the interaction.
-                    if isinstance(event, Message):
+                    elif isinstance(event, Message):
                         print(f"💬 메시지 수신 ")
                         return event
                 else:

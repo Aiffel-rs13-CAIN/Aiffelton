@@ -18,6 +18,7 @@ from a2a.types import (
     SendMessageRequest,
     SendStreamingMessageRequest,
     Task,
+    TaskState,
     TaskArtifactUpdateEvent,
     TaskStatusUpdateEvent,
     DataPart,
@@ -29,7 +30,8 @@ from uuid import uuid4
 
 from .a2a_client import A2AClientAgent
 from .a2a_client import A2AServerEntry
-from typing import Optional
+from dataclasses import dataclass
+from typing import TypedDict, Optional
 
 # Agent LLM Handler 임포트
 try:
@@ -41,26 +43,28 @@ except ImportError:
 
 a2a_client : Optional[A2AClientAgent] = None 
 
+@dataclass
+class LLMResponse:
+    response: str
+    is_complete: bool
+    error_occur: bool
+    error_message: Optional[str] = None
+class SimpleStateManager:
+    ''' Context 단위로 State를 관리한다 '''
+    def __init__(self):
+        self.states = {}
+    
+    def get_state(self, context_id: str):           
+        return self.states.get(context_id, {})
+    
+    def update_state(self, context_id: str, data: dict):  
+        if context_id not in self.states:
+            self.states[context_id] = {}
+        self.states[context_id].update(data)
+    
+    def set_response(self, context_id: str, response: str):  
+        self.update_state(context_id, {"response": response})
 
-def create_new_text_message(
-        user_text:str, 
-        task_id:Optional[str] | None = None, 
-        context_id:Optional[str] | None = None ) :
-
-    message_id = str(uuid.uuid4())
-
-    print(f"TextPart: {TextPart(text=user_text)}")
-   
-    message=Message(
-                role='user',
-                parts=[TextPart(text=user_text)],
-                #message_id=str(uuid.uuid4()),
-                **{"messageId": message_id},   # alias 이름으로 명시적 전달
-                context_id=context_id,
-                task_id=task_id
-    )       
-
-    return message
 
 class A2AServerAgentExecutor(AgentExecutor):
 
@@ -68,6 +72,9 @@ class A2AServerAgentExecutor(AgentExecutor):
         # 에이전트 이름 저장
         self.agent_name = agent_name or "Unknown Agent"
         self.remote_agent_entries = remote_agent_entries
+        # BEGIN - 2025.08.22 task state 관리 {
+        self.state_manager = SimpleStateManager() 
+        # END - 2025.08.22 task state관리 }
         print(f"🤖 {self.agent_name} 실행기 초기화 완료")
 
     async def execute(
@@ -91,40 +98,78 @@ class A2AServerAgentExecutor(AgentExecutor):
 
         # BEGIN - 2025.08.20 task 관리 {
         if not task : 
-            task = new_task(context.message) 
-            await event_queue.enqueue_event(task)  # task 전송 
+            task = new_task(context.message)            
+            await event_queue.enqueue_event(task)  # task 전송       
         
         updater = TaskUpdater(event_queue, task.id, task.context_id)
         # END - 2025.08.20 task 관리 }
 
+        # BEGIN - 2025.08.22 task state 관리 {
+        current_state = self.state_manager.get_state(task.id)
+        # 별도 state 관리를 하려면, 사용
+        # if not current_state 
+        # END - 2025.08.22 task state관리 }
+
         
         # 3. LLM으로 응답 생성
-        response_text = await self._generate_llm_response(agent_name, text)
-      
-        # 4. 특별한 처리 (에이전트별 로직)
-        await self._handle_agent_specific_logic(agent_name, text, response_text)
+        result = await self._generate_llm_response(agent_name, text)
+        if not result.error_occur : 
+            response_text = result.response
+
+            self.state_manager.set_response(task.id, response_text)
+    
+            # 4. 특별한 처리 (에이전트별 로직)
+            await self._handle_agent_specific_logic(agent_name, text, response_text)
+
+            if result.is_complete : 
+                # 성공적으로 완료된 경우 - artifact로 결과 전송
+                part = TextPart(text=response_text)
+                await updater.add_artifact(
+                    parts = [Part(root=part)],
+                    name = f'{agent_name}-result'
+                )
+                await updater.complete()
+                print(f"📤 응답 전송 완료: {response_text[:100]}...")
+
+            else : 
+                # 부분 완료 - working 상태로 중간 결과 전송
+                await updater.update_status(
+                    TaskState.working,
+                    new_agent_text_message(
+                        response_text,
+                        task.context_id,
+                        task.id,
+                    ),
+                )
+                print(f"📤 중간 응답 전송: {response_text[:100]}...")
+        else :
+            # 에러 발생 - TaskState.failed로 실패 처리
+            error_text = result.error_message or "알 수 없는 오류가 발생했습니다."
+            await updater.update_status(
+                    TaskState.failed,
+                    new_agent_text_message(
+                        error_text,
+                        task.context_id,
+                        task.id,
+                    ),
+                    final = True,
+                )
+            print(f"📤 실패 응답 전송: {response_text[:100]}...")
+
         
-        # 5. 응답 전송
-        # BEGIN - 2025.08.20 task 관리 {
-        part = TextPart(text=response_text)
-        await updater.add_artifact(
-            parts = [Part(root=part)],
-            name = f'{agent_name}-result'
-        )
-        await updater.complete()
-        
-        #await event_queue.enqueue_event(new_agent_text_message(response_text))
-        # END - 2025.08.20 task 관리}
-        print(f"📤 응답 전송 완료: {response_text[:100]}...")
     
     def _get_agent_name_from_context(self, context: RequestContext) -> str:
         """컨텍스트에서 에이전트 이름 추출 (더 이상 사용하지 않음)"""
         return self.agent_name
     
-    async def _generate_llm_response(self, agent_name: str, user_message: str) -> str:
+    async def _generate_llm_response(self, agent_name: str, user_message: str) -> LLMResponse:
         """LLM을 사용하여 응답 생성"""
         if not LLM_AVAILABLE:
-            return f"[{agent_name}] 기본 응답: {user_message}을(를) 받았습니다."
+            return LLMResponse(
+                response=f"[{agent_name}] 기본 응답: {user_message}을(를) 받았습니다.",
+                is_complete=True,
+                error_occur=False
+            )
         
         try:
             # 에이전트별 LLM 핸들러 가져오기
@@ -133,11 +178,20 @@ class A2AServerAgentExecutor(AgentExecutor):
             # LLM으로 응답 생성
             response = await llm_handler.process_message(user_message)
             
-            return response
+            return LLMResponse(
+                response=response,
+                is_complete=True,
+                error_occur=False
+            )
             
         except Exception as e:
             print(f"❌ {agent_name} LLM 응답 생성 실패: {e}")
-            return f"[{agent_name}] 죄송합니다. 현재 응답을 생성할 수 없습니다."
+            return LLMResponse(
+                response=f"[{agent_name}] 죄송합니다. 현재 응답을 생성할 수 없습니다.",
+                is_complete=False,
+                error_occur=True,
+                error_message=str(e)
+            )
     
     async def _handle_agent_specific_logic(self, agent_name: str, user_message: str, response: str):
         """에이전트별 특별한 로직 처리"""
