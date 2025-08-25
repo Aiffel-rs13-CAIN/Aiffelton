@@ -1,0 +1,40 @@
+{
+  "name": "LabAssistant",
+  "description": "연구실의 AI 연구 어시스턴트로서 최신 논문을 탐색하고 연구주제를 발굴하며 다른 에이전트들과 협업하는 메인 조율 에이전트",
+  "host": "localhost",
+  "port": 10000,
+  "version": "1.0.0",
+  "skills": [
+    {
+      "id": "research_coordination",
+      "name": "Research Coordination",
+      "description": "논문 탐색, 연구주제 발굴 및 에이전트 간 협업 조율",
+      "tags": ["research", "coordination", "paper_exploration"],
+      "examples": [
+        "최신 AI 논문을 찾아주세요",
+        "이 내용을 요약해서 기록해주세요"
+      ]
+    },
+    {
+      "id": "agent_collaboration",
+      "name": "Agent Collaboration",
+      "description": "다른 에이전트들과의 A2A 통신을 통한 작업 분배 및 결과 수집",
+      "tags": ["a2a", "collaboration", "coordination"],
+      "examples": [
+        "Recorder Agent에게 데이터를 저장 요청",
+        "Summarize Agent에게 요약 작업 위임"
+      ]
+    }
+  ],
+  "capabilities": {
+    "streaming": true,
+    "pushNotifications": true
+  },
+  "defaultInputModes": ["text"],
+  "defaultOutputModes": ["text"],
+  "executorClass": "MainAgentExecutor",
+  "executorParams": {
+    "available_agents": ["Recorder Agent", "Summarize Agent"],
+    "coordination_role": "primary"
+  }
+}

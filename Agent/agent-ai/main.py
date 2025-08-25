@@ -14,7 +14,7 @@ from modules.a2a_manager import get_a2a_manager
 load_dotenv()
 
 def load_config(path):
-    with open(path, 'r') as f:
+    with open(path, 'r', encoding='utf-8') as f:
         loader = yaml.SafeLoader
         loader.add_implicit_resolver(
             u'tag:yaml.org,2002:env_var',

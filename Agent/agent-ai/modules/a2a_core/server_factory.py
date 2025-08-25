@@ -20,9 +20,9 @@ from .server_executor import A2ACombinedAgentExecutor
 from .a2a_client import A2AServerEntry
 
 AGENT_EXECUTOR_CLASSES = {
+    "MainAgentExecutor": A2ACombinedAgentExecutor,  # 메인 에이전트는 송신/수신 모두 가능
     "SummarizerAgentExecutor": A2ACombinedAgentExecutor,
     "RecorderAgentExecutor": A2AServerAgentExecutor, # 서버 에이전트 익스큐터만 사용해서
-    # "ExperimentAgentExecutor": ExperimentAgentExecutor, ...
 }
 
 def build_server_from_config(config_file:str) :

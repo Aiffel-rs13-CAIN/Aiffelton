@@ -114,20 +114,8 @@ class LLMNode:
         if context:
             system_content += f"\n\n[참고 컨텍스트]\n{context}"
 
-        # A2A 통신 지침 추가
-        a2a_guidance = """
-
-[🤖 A2A 통신 지침]
-- 다른 에이전트와 협업이 필요한 상황에서는 a2a_send 도구를 사용하세요
-- 사용 가능한 에이전트: 'Recorder Agent' (기록/저장), 'Summarize Agent' (요약/분석)
-- 예시 상황:
-  * 연구 진행 상황을 기록해야 할 때 → Recorder Agent에게 전송
-  * 긴 텍스트나 정보를 요약해야 할 때 → Summarize Agent에게 전송
-  * 사용자가 다른 에이전트의 도움이 필요한 작업을 요청할 때
-- 사용자의 요청을 분석해서 자동으로 적절한 에이전트에게 메시지를 보내세요"""
-
-        # 메시지 구성
-        enhanced_messages = [SystemMessage(content=system_content + a2a_guidance)]
+        # 메시지 구성 (시스템 메시지는 config에서 가져옴)
+        enhanced_messages = [SystemMessage(content=system_content)]
 
         # 기존 메시지들 추가 (최근 대화만)
         if messages:
