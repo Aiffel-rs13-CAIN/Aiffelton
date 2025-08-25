@@ -144,7 +144,6 @@ class A2AServerModule:
 		_server_executor_mod.a2a_client = client_agent
 		print("🔗 서버에 A2A 클라이언트 에이전트가 연결되었습니다.")
 
-
 # 편의 함수
 def run_server(config_path: str) -> A2AServerModule:
 	mod = A2AServerModule()

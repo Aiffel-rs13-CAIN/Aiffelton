@@ -44,7 +44,7 @@ class A2AManager:
 
     async def _start_servers(self) -> None:
         """A2A 서버들을 시작합니다"""
-        server_names = ["Summarize Agent", "Recorder Agent"]
+        server_names = ["LabAssistant", "Summarize Agent", "Recorder Agent"]
         
         for server_name in server_names:
             try:
