@@ -78,15 +78,101 @@ MEM0_API_KEY=m0-pKIPOYwumXXXXXXXXXXXXXXXXX
 
 ### 7️⃣ 프로젝트 실행
 
-환경설정과 API 키 입력이 완료되면, 아래 명령어로 프로젝트를 실행할 수 있습니다.
+환경설정과 API 키 입력이 완료되면, agent-ai 디렉토리로 이동하여 프로젝트를 실행할 수 있습니다.
 
 ```bash
-# main.py 실행
+# agent-ai 디렉토리로 이동
+cd Agent/agent-ai
+
+# 가상환경 활성화 (아직 안 되어 있다면)
+source venv/bin/activate
+
+# 메인 시스템 실행 (권장)
 python main.py
 ```
 
-프로그램 실행 시 콘솔에 다음과 같은 메시지가 출력되면 정상 동작 중입니다.
+## 🚀 실행 모드
+
+이 프로젝트는 다양한 실행 모드를 제공합니다:
+
+### 1. **전체 시스템 실행** (권장)
 
 ```bash
-'Aiffelton Agent' 에이전트가 준비되었습니다. 질문을 입력하세요. (종료하려면 'exit' 입력)
+python main.py
 ```
+
+- **LabAssistant** (메인 에이전트) + **A2A 멀티에이전트 시스템** 모두 실행
+- 3개 A2A 서버가 동시에 시작됩니다:
+  - `LabAssistant` (포트 10000) - 메인 조율 에이전트
+  - `Recorder Agent` (포트 10001) - 데이터 기록 전담
+  - `Summarize Agent` (포트 10003) - 텍스트 요약 전담
+- 양방향 에이전트 간 통신 지원
+
+### 2. **개별 에이전트 실행**
+
+```bash
+python main.py <agent_name>
+```
+
+사용 가능한 에이전트:
+
+```bash
+python main.py recorder_agent      # Recorder Agent만 실행
+python main.py summarize_agent     # Summarize Agent만 실행
+python main.py        # LabAssistant만 실행 (A2A 없이)
+```
+
+### 3. **에이전트 목록 확인**
+
+```bash
+python main.py list               # 사용 가능한 에이전트 목록
+python main.py --help             # 도움말 출력
+```
+
+## 📋 실행 성공 확인
+
+**전체 시스템 실행 시** 다음과 같은 메시지가 출력되면 정상 동작 중입니다:
+
+```bash
+🚀 A2A Manager 시작 중...
+🚀 A2A 서버 시작: http://127.0.0.1:10000 (config: main_agent.json)
+  ✅ 서버 시작됨: LabAssistant
+🚀 A2A 서버 시작: http://127.0.0.1:10001 (config: recorder_agent.json)
+  ✅ 서버 시작됨: Recorder Agent
+🚀 A2A 서버 시작: http://127.0.0.1:10003 (config: summarize_agent.json)
+  ✅ 서버 시작됨: Summarize Agent
+✅ A2A Manager 준비 완료 (서버: 3개, 클라이언트: 준비됨)
+
+🤖 에이전트를 시작합니다.
+📝 명령어:
+  - 'exit' : 종료
+  - 'debug' : 상태 확인
+  - '/node <작업내용>' : 노드 기반 멀티에이전트 실행
+  - '/a2a <agent_name> <message>' : A2A 통신
+💡 이제 LLM이 자동으로 필요시 다른 에이전트와 통신합니다!
+```
+
+## 🎯 사용 예시
+
+### 기본 대화
+
+```
+사용자: 최신 AI 논문을 찾아주세요
+```
+
+### A2A 에이전트 직접 호출
+
+```
+사용자: /a2a 'Summarize Agent' '이 텍스트를 요약해주세요: [긴 텍스트]'
+사용자: /a2a 'Recorder Agent' '이 데이터를 저장해주세요'
+```
+
+### 멀티에이전트 워크플로우
+
+```
+사용자: 이 논문을 요약하고 기록해주세요
+# → LabAssistant가 자동으로 Summarize Agent와 Recorder Agent에게 작업 분배
+```
+
+
+---
