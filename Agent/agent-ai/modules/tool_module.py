@@ -1,89 +1,77 @@
-from typing import Dict, Any, List
 import asyncio
+from typing import List, Dict, Any, Coroutine
+from langchain_core.tools import BaseTool
+from langchain_core.messages import ToolMessage
 from concurrent.futures import ThreadPoolExecutor
 from .a2a_manager import get_a2a_manager
 
 class ToolNode:
-    def __init__(self, agent_core):
-        self.agent_core = agent_core
+    def __init__(self,tools: List[BaseTool]):
+        self.tools_by_name = {tool.name: tool for tool in tools}
+
+    async def _execute_tool(self, tool_call: Dict[str, Any]) -> ToolMessage:
+        """단일 도구 호출을 비동기적으로 실행하고 결과를 ToolMessage로 반환"""
+        print(f"[ToolNode] tool_call 요청: {tool_call}")
+        tool_name = tool_call.get("name")
+        tool_args = tool_call.get("args", {}) or {}
+        tool_id = tool_call.get("id")
+
+        observation = None
+        if tool_name == "a2a_send":
+            try:
+                observation = await self._handle_a2a_send(tool_args)
+            except Exception as e:
+                observation = f"Error during a2a_send: {e}"
+        else:
+            tool_to_invoke = self.tools_by_name.get(tool_name)
+            if not tool_to_invoke:
+                observation = f"Error: Tool '{tool_name}' not found."
+            else:
+                try:
+                    # 도구를 비동기적으로 실행
+                    observation = await tool_to_invoke.ainvoke(tool_args)
+                except Exception as e:
+                    observation = f"Error executing tool {tool_name}: {e}"
+
+        # 안전한 디버그 출력: observation이 항상 정의되도록 보장
+        print(f"[ToolNode] tool_call 결과: {observation}")
+
+        return ToolMessage(
+            content=str(observation),
+            tool_call_id=tool_id
+        )
     
-    def process(self, state: Dict[str, Any]) -> Dict[str, Any]:
-        """도구 실행 노드 처리 로직 - LLM tool_calls 처리"""
-        messages = state.get("messages", [])
-        results = []
-        
-        if not messages:
-            return {"tool_results": results}
-        
-        last_message = messages[-1]
-        
-        # LLM이 생성한 tool_calls 확인 (duck typing으로 안전하게)
-        tool_calls = getattr(last_message, "tool_calls", None)
-        
-        if tool_calls:
-            print(f"🔧 도구 호출 감지: {len(tool_calls)}개")
-            
-            for call in tool_calls:
-                # tool_call 구조: dict 또는 객체
-                if isinstance(call, dict):
-                    name = call.get("name")
-                    args = call.get("args", {})
-                else:
-                    name = getattr(call, "name", None)
-                    args = getattr(call, "args", {})
-                
-                print(f"  📞 호출: {name} with {args}")
-                
-                if name == "a2a_send":
-                    # A2A 전송 처리
-                    result = self._handle_a2a_send(args)
-                    results.append({
-                        "tool": "a2a_send",
-                        "args": args,
-                        "result": result
-                    })
-                    
-                else:
-                    # 다른 도구들은 향후 추가
-                    error_result = f"도구 '{name}'는 아직 구현되지 않았습니다."
-                    results.append({
-                        "tool": name or "unknown",
-                        "args": args,
-                        "result": error_result
-                    })
-        
-        return {"tool_results": results}
-    
-    def _handle_a2a_send(self, args: Dict[str, Any]) -> str:
-        """A2A 전송을 처리합니다"""
+    async def _handle_a2a_send(self, args: Dict[str, Any]) -> str:
+        """A2A 전송을 비동기로 처리"""
         agent_name = args.get("agent_name") or args.get("agent")
         text = args.get("text") or args.get("message")
-        
         if not agent_name or not text:
             return "오류: agent_name과 text가 필요합니다."
-        
         try:
-            # 백그라운드 스레드에서 비동기 작업 실행 (이벤트 루프 충돌 방지)
-            def run_async():
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                try:
-                    manager = get_a2a_manager()
-                    return loop.run_until_complete(manager.send(agent_name, text))
-                finally:
-                    loop.close()
-            
-            with ThreadPoolExecutor(max_workers=1) as executor:
-                future = executor.submit(run_async)
-                response = future.result(timeout=30)  # 30초 타임아웃
-                
-                if response:
-                    return f"✅ '{agent_name}'에게 메시지 전송 완료. 응답: {response}"
-                else:
-                    return f"⚠️ '{agent_name}'에게 메시지 전송했지만 응답이 없습니다."
-                    
+            manager = get_a2a_manager()
+            response = await manager.send(agent_name, text)
+            if response:
+                return f"✅ '{agent_name}'에게 메시지 전송 완료. 응답: {response}"
+            else:
+                return f"⚠️ '{agent_name}'에게 메시지 전송했지만 응답이 없습니다."
         except Exception as e:
             return f"❌ A2A 전송 오류: {str(e)}"
+
+    async def process(self, state: Dict[str, Any]) -> Dict[str, Any]:
+        """상태(state)에서 tool_calls를 찾아 모든 도구를 병렬로 실행"""
+        messages = state.get("messages", [])
+        if not messages:
+            return state
+        last_message = messages[-1]
+        tool_calls = getattr(last_message, "tool_calls", None)
+        if not tool_calls:
+            return state
+
+        print(f"🔧 도구 호출 감지: {len(tool_calls)}개")
+        tasks: List[Coroutine] = [self._execute_tool(call) for call in tool_calls]
+        results: List[ToolMessage] = await asyncio.gather(*tasks)
+        new_messages = list(messages) + results
+        return {"messages": new_messages}
 
 # 향후 도구 관련 클래스들을 여기에 추가할 수 있습니다
 # class CalculatorTool:

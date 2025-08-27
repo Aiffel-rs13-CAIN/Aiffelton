@@ -8,16 +8,17 @@ from workflows.workflow_controller import WorkflowController
 
 
 class WorkflowFactory:
-    """워크플로우 생성을 위한 팩토리 클래스 (A2A 미포함 기본 버전)"""
-
-    def __init__(self, agent_core):
+    """워크플로우 생성을 위한 팩토리 클래스"""
+    
+    def __init__(self, agent_core, all_tools):
         self.agent_core = agent_core
+        self.all_tools = all_tools
         # 노드 인스턴스 생성
         self.user_input_node = UserInputNode(agent_core)
         self.memory_node = MemoryNode(agent_core)
         self.rag_node = RAGNode(agent_core)
-        self.llm_node = LLMNode(agent_core)
-        self.tool_node = ToolNode(agent_core)
+        self.llm_node = LLMNode(agent_core, self.all_tools)
+        self.tool_node = ToolNode(self.all_tools)
         self.output_node = OutputNode(agent_core)
         self.controller = WorkflowController(agent_core)
 
@@ -36,15 +37,18 @@ class WorkflowFactory:
     def llm_node_func(self, state):
         """LLM 노드 함수"""
         return self.llm_node.process(state)
-
-    def tool_node_func(self, state):
+    
+    async def tool_node_func(self, state):
         """도구 노드 함수"""
-        return self.tool_node.process(state)
-
+        return await self.tool_node.process(state)   
+    
     def output_node_func(self, state):
         """출력 노드 함수"""
         return self.output_node.process(state)
-
+    async def post_process_node_func(self, state):
+        """후처리 LLM 노드 함수"""
+        return await self.llm_node.post_process(state)
+        
     def should_continue(self, state):
         """워크플로우 계속 진행 여부 결정"""
         return self.controller.should_continue(state)

@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "arxiv-paper-mcp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@smithery/cli@latest",
+        "run",
+        "@daheepk/arxiv-paper-mcp",
+        "--key",
+        "ccf3ce22-d8dc-4f4c-bb7c-e6276fe714a2"
+      ]
+    }
+  }
+}

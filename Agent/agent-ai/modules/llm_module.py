@@ -8,10 +8,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class LLMNode:
-    def __init__(self, config):
+    def __init__(self, config, tools):
         self.config = config.get('llm', {})
+        self.tools = tools
         
-        # LLM 자체 초기화 및 도구 바인딩
+        # LLM 자체 초기화
         base_llm = self._initialize_llm()
         self.llm = self._bind_tools(base_llm)
         
@@ -70,18 +71,29 @@ class LLMNode:
         }
 
     def _bind_tools(self, llm):
-        """LLM에 a2a_send 도구를 바인딩"""
+        """LLM에 모든 도구를 바인딩 (A2A + 기존 도구)"""
         try:
-            tool_spec = self._a2a_tool_spec()
-            if hasattr(llm, "bind_tools"):
-                return llm.bind_tools([tool_spec])
+            tools_to_bind = []
+            
+            # A2A 도구 추가
+            tools_to_bind.append(self._a2a_tool_spec())
+            
+            # 기존 도구들 추가
+            if self.tools:
+                tools_to_bind.extend(self.tools)
+            
+            if hasattr(llm, "bind_tools") and tools_to_bind:
+                return llm.bind_tools(tools_to_bind)
             else:
-                print("⚠️ 현재 LLM은 도구 바인딩을 지원하지 않습니다.")
+                if not tools_to_bind:
+                    print("⚠️ 바인딩할 도구가 없습니다.")
+                else:
+                    print("⚠️ 현재 LLM은 도구 바인딩을 지원하지 않습니다.")
                 return llm
         except Exception as e:
             print(f"⚠️ 도구 바인딩 실패: {e}")
             return llm
-    
+        
     def process(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """LLM 노드 처리 로직"""
         messages = state.get("messages", [])
@@ -172,3 +184,37 @@ class LLMNode:
                 "last_response": "오류가 발생했습니다.",
                 "should_exit": state.get("should_exit", False)
             }
+
+    async def post_process(self, state: Dict[str, Any]) -> Dict[str, Any]:
+        """도구 실행 결과를 자연스러운 언어로 후처리하고, 대화 기록을 관리합니다."""
+        messages = state.get("messages", [])
+        
+        user_question = ""
+        tool_results_content = []
+        last_human_message_index = -1
+
+        for i, msg in enumerate(messages):
+            if isinstance(msg, HumanMessage):
+                user_question = msg.content
+                last_human_message_index = i
+            elif hasattr(msg, 'tool_call_id'):
+                tool_results_content.append(str(msg.content))
+        
+        if not tool_results_content:
+            return state
+
+        prompt = f"""Based on the following user question and the data received from a tool, provide a final, comprehensive, and user-friendly answer in Korean.
+        Original Question: {user_question}
+        Tool-provided Data: {', '.join(tool_results_content)}
+        Final Answer:"""
+        
+        final_response = await self.llm.ainvoke(prompt)
+
+        # 마지막 사용자 질문까지의 기록을 유지하고, 그 뒤에 최종 답변을 추가합니다.
+        # 이렇게 하면 tool_call, ToolMessage 같은 중간 과정이 정리됩니다.
+        if last_human_message_index != -1:
+            final_messages = messages[:last_human_message_index + 1] + [final_response]
+        else: # 예외적인 경우
+            final_messages = messages + [final_response]
+
+        return {"messages": final_messages, "last_response": final_response.content}
