@@ -8,11 +8,16 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class LLMNode:
-    def __init__(self, config):
+    def __init__(self, config, tools):
         self.config = config.get('llm', {})
+        self.tools = tools
         
         # LLM 자체 초기화
         self.llm = self._initialize_llm()
+
+        # 도구 바인딩
+        if self.tools:
+            self.llm = self.llm.bind_tools(self.tools)
         
         print(f"🤖 LLM 모듈 초기화 완료:")
         print(f"   - 공급자: {self.config.get('provider', 'google')}")
@@ -106,3 +111,37 @@ class LLMNode:
                 "last_response": "오류가 발생했습니다.",
                 "should_exit": state.get("should_exit", False)
             }
+
+    async def post_process(self, state: Dict[str, Any]) -> Dict[str, Any]:
+        """도구 실행 결과를 자연스러운 언어로 후처리하고, 대화 기록을 관리합니다."""
+        messages = state.get("messages", [])
+        
+        user_question = ""
+        tool_results_content = []
+        last_human_message_index = -1
+
+        for i, msg in enumerate(messages):
+            if isinstance(msg, HumanMessage):
+                user_question = msg.content
+                last_human_message_index = i
+            elif hasattr(msg, 'tool_call_id'):
+                tool_results_content.append(str(msg.content))
+        
+        if not tool_results_content:
+            return state
+
+        prompt = f"""Based on the following user question and the data received from a tool, provide a final, comprehensive, and user-friendly answer in Korean.
+        Original Question: {user_question}
+        Tool-provided Data: {', '.join(tool_results_content)}
+        Final Answer:"""
+        
+        final_response = await self.llm.ainvoke(prompt)
+
+        # 마지막 사용자 질문까지의 기록을 유지하고, 그 뒤에 최종 답변을 추가합니다.
+        # 이렇게 하면 tool_call, ToolMessage 같은 중간 과정이 정리됩니다.
+        if last_human_message_index != -1:
+            final_messages = messages[:last_human_message_index + 1] + [final_response]
+        else: # 예외적인 경우
+            final_messages = messages + [final_response]
+
+        return {"messages": final_messages, "last_response": final_response.content}

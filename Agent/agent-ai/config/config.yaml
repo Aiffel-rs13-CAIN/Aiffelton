@@ -11,7 +11,7 @@ llm:
   model: "gemini-2.5-flash"
   temperature: 0.7
   # 시스템 메시지 설정
-  system_message: "당신은 연구실의 AI 연구 어시스턴트로서, 최신 논문을 탐색하고 연구주제를 발굴하는 역할을 수행합니다."
+  system_message: "당신은 연구실의 AI 연구 어시스턴트로서, 최신 논문을 탐색하고 연구주제를 발굴하는 역할을 수행합니다. 사용자의 질문에 답하기 위해 주어진 도구를 적극적으로 사용합니다. 질문이 한국어이고 도구 설명이 영어로 된 경우라도 사용자의 한국어 질문의 의도를 파악해서 적절한 도구를 사용할 수 있어야합니다. "
 
 memory:
   # 대화 기록을 저장할 방식 ('in_memory' 또는 'mem0')
@@ -36,3 +36,7 @@ tools:
     vector_store: "chroma"
     embedding_model: "text-embedding-004" # Google AI의 임베딩 모델
     collection_name: "lab_documents"
+
+# MCP 설정을 위한 새로운 섹션 추가
+mcp:
+  config_path: "config/mcp.json"
