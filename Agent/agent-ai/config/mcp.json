@@ -8,7 +8,7 @@
         "run",
         "@daheepk/arxiv-paper-mcp",
         "--key",
-        "ccf3ce22-d8dc-4f4c-bb7c-e6276fe714a2"
+        "your-api-key"
       ]
     }
   }

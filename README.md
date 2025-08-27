@@ -74,7 +74,7 @@ MEM0_API_KEY=m0-pKIPOYwumXXXXXXXXXXXXXXXXX
 | OPENAI_API_KEY    | OpenAI GPT 모델 API 키             |
 | MEM0_API_KEY      | Mem0 장기 메모리 서비스 API 키     |
 
----
+## 참고: `MEM0_API_KEY`는 https://mem0.ai/ 에서 발급받아 사용할 수 있습니다.
 
 ### 7️⃣ 프로젝트 실행
 
@@ -173,6 +173,5 @@ python main.py --help             # 도움말 출력
 사용자: 이 논문을 요약하고 기록해주세요
 # → LabAssistant가 자동으로 Summarize Agent와 Recorder Agent에게 작업 분배
 ```
-
 
 ---
