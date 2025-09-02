@@ -21,8 +21,6 @@ class AgentState(TypedDict):
     agent_manager: object  = None
 def create_single_agent_workflow(agent_core, all_tools):
     factory = WorkflowFactory(agent_core, all_tools)
-    
-
     workflow = StateGraph(AgentState)
 
     # 노드 추가
