@@ -1,6 +1,5 @@
 # 데이터 파일 무조건 제외
 Tasks/medqa_tasks.jsonl
-data/
 raw/
 answers/
 cache/
