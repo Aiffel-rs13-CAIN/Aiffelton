@@ -1,0 +1,12 @@
+Task Id      Success
+---------  ---------
+14              True
+15              True
+16              True
+0              False
+17              True
+---------  ---------
+Successes          4
+Failures           1
+Missing            0
+Total              5

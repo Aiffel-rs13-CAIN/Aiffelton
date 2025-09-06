@@ -1,0 +1,13 @@
+             Trial 0
+Task Id      Success
+---------  ---------
+0              False
+14              True
+15              True
+16             False
+17             False
+---------  ---------
+Successes          2
+Failures           3
+Missing            0
+Total              5
