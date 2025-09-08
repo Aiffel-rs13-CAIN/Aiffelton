@@ -1,0 +1,6 @@
+pyautogen==0.2.35
+autogenbench==0.0.3
+google-cloud-aiplatform
+docker
+fastapi
+litellm

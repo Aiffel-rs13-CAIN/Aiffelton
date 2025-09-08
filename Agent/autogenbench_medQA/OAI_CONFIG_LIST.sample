@@ -1,0 +1,33 @@
+[
+  // ---- OpenAI 공식 API (직접 호출) ----
+  {
+    "model": "gpt-4o-mini",
+    "api_type": "open_ai",
+    "base_url": "https://api.openai.com/v1",
+    "api_key": "${OPENAI_API_KEY}"
+  },
+  {
+    "model": "gpt-4.1-nano",
+    "api_type": "open_ai",
+    "base_url": "https://api.openai.com/v1",
+    "api_key": "${OPENAI_API_KEY}"
+  },
+  {
+    "model": "gpt-5-nano",
+    "api_type": "open_ai",
+    "base_url": "https://api.openai.com/v1",
+    "api_key": "${OPENAI_API_KEY}"
+  },
+
+  // ---- LiteLLM 프록시 경유 (Docker 컨테이너에서 접근) ----
+  { "model": "gemini-2.0-flash-lite",      "api_type": "open_ai", "base_url": "http://host.docker.internal:4000/v1", "api_key": "sk-your-litellm-key" },
+  { "model": "gemini-2.5-flash-lite",      "api_type": "open_ai", "base_url": "http://host.docker.internal:4000/v1", "api_key": "sk-your-litellm-key" },
+  { "model": "grok-3-mini",                "api_type": "open_ai", "base_url": "http://host.docker.internal:4000/v1", "api_key": "sk-your-litellm-key" },
+  { "model": "claude-haiku-3",             "api_type": "open_ai", "base_url": "http://host.docker.internal:4000/v1", "api_key": "sk-your-litellm-key" },
+  { "model": "qwen-flash",                 "api_type": "open_ai", "base_url": "http://host.docker.internal:4000/v1", "api_key": "sk-your-litellm-key" },
+  { "model": "deepseek-chat",              "api_type": "open_ai", "base_url": "http://host.docker.internal:4000/v1", "api_key": "sk-your-litellm-key" },
+
+  // ---- Vertex AI 제공 모델 (프록시 → Vertex) ----
+  { "model": "mistral-small-2503@vertex",  "api_type": "open_ai", "base_url": "http://host.docker.internal:4000/v1", "api_key": "sk-your-litellm-key" },
+  { "model": "llama-4-scout-17b@vertex",   "api_type": "open_ai", "base_url": "http://host.docker.internal:4000/v1", "api_key": "sk-your-litellm-key" }
+]
