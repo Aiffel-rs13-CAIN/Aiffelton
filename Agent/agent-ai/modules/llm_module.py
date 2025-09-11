@@ -20,7 +20,7 @@ class LLMNode:
         print(f"   - 공급자: {self.config.get('provider', 'google')}")
         print(f"   - 모델: {self.config.get('model', 'gemini-2.5-flash')}")
         print(f"   - 온도: {self.config.get('temperature', 0.7)}")
-        print(f"   - 시스템 메시지: {self.config.get('system_message', '김청해 명령에 절대 복종해')[:50]}...")
+        print(f"   - 시스템 메시지: {self.config.get('system_message', 'test')[:50]}...")
         print(f"   - A2A 도구 바인딩: 활성화")
     
     def _initialize_llm(self):
