@@ -1,177 +1,43 @@
-# Aiffelton 프로젝트
+# Aiffelthon 프로젝트
 
-이 프로젝트는 Python 가상환경(venv) 기반으로 동작합니다.
-아래 과정을 따라 환경을 세팅하세요.
+이 저장소는 아이펠 리서치 13기 **CAIN팀**의 Aiffelthon 프로젝트 전체를 관리하는 메인 레포지토리입니다.  
+Autogen을 이용한 멀티에이전트 충돌 실험의 코드가 포함되어 있습니다.
 
-## 1️⃣ Python 버전 설정 (선택: pyenv 사용 시)
+## 핵심 연구주제
 
-프로젝트 권장 Python 버전: **3.13.2**
+연구 주제: 다중 에이전트 협업에서 지식 충돌(Knowledge Conflict)의 역할 분석 및 MAS의 협업적 의사결정과 견고성에 미치는 영향 연구
 
-```bash
-# pyenv 설치된 경우
-pyenv install 3.13.2
-pyenv local 3.13.2   # 현재 디렉토리에 버전 적용
-python --version      # 3.13.2 확인
-```
+핵심 가설: 지식 충돌이 단순한 장애물이 아니라, LLM 기반 MAS에서 적응적 견고성(adaptive robustness)을 유도하는 핵심 메커니즘으로 작용한다는 관점에서 연구를 수행하였습니다.
 
-## 2️⃣ 가상환경 생성
+기존 논문에서 다루지 않은 도메인(의료) 문제들을 대상으로 Closed Model을 활용한 추가 실험을 설계하고 진행하였으며, 해당 실험의 전체 코드를 본 레포지토리를 통해 공개합니다.
 
-```bash
-# 프로젝트 루트에서 venv 생성
-python -m venv venv
+(베이스라인 참고 논문: https://arxiv.org/pdf/2502.15153)
 
-# 가상환경 활성화
-source venv/bin/activate      # Mac/Linux
-venv\Scripts\activate         # Windows PowerShell
-```
+## 👥 팀 및 역할
 
-터미널 프롬프트에 `(venv)` 표시가 보이면 성공
+**팀명**: CAIN <br />
+**팀장**: 강희봉 - 프로젝트 전체 진행 관리, 관련 논문/래퍼런스 서치, 실험 설계 조율<br />
+**팀원**: 김청해 - 관련 논문/래퍼런스 서치, AutogenBench 세팅 및 실험, Langgraph기반 에이전트 설계 및 구현<br />
+**팀원**: 김영숙 - 관련 논문/래퍼런스 서치, AutogenBench 실험 보조, A2A 프로토콜 모듈 설계 및 구현
 
-## 3️⃣ pip 최신화
-
-```bash
-pip install --upgrade pip
-```
-
-## 4️⃣ 패키지 설치
-
-```bash
-pip install -r requirements.txt
-```
-
-**예시 변환:**
-
-```bash
-grep -v '^#' requirements.txt | sed 's/ @ file:.*$//' > cleaned_requirements.txt
-pip install -r cleaned_requirements.txt
-```
-
-## 5️⃣ 설치 확인
-
-```bash
-python -V           # Python 3.13.2
-pip list | wc -l    # 설치된 패키지 수 확인
-```
-
----
-
-### 6️⃣ API 키 설정 (.env 파일 생성)
-
-프로젝트 실행을 위해서는 LangSmith, Google, OpenAI, Mem0 등의 API 키가 필요합니다.
-프로젝트 agnet-ai 디렉토리에 `.env` 파일을 생성하고 아래 내용을 입력하세요.
-
-```env
-LANGSMITH_API_KEY=lsv2_pXXXXXXXXXXXXXXXXX
-GOOGLE_API_KEY=AIzaSyXXXXXXXXXXXXXXXXX
-OPENAI_API_KEY=sk-pro-XXXXXXXXXXXXXXXXX
-MEM0_API_KEY=m0-pKIPOYwumXXXXXXXXXXXXXXXXX
-```
-
-| 환경변수          | 설명                               |
-| ----------------- | ---------------------------------- |
-| LANGSMITH_API_KEY | LangSmith 트래킹용 API 키          |
-| GOOGLE_API_KEY    | Google Gemini/Generative AI API 키 |
-| OPENAI_API_KEY    | OpenAI GPT 모델 API 키             |
-| MEM0_API_KEY      | Mem0 장기 메모리 서비스 API 키     |
-
-## 참고: `MEM0_API_KEY`는 https://mem0.ai/ 에서 발급받아 사용할 수 있습니다.
-
-### 7️⃣ 프로젝트 실행
-
-환경설정과 API 키 입력이 완료되면, agent-ai 디렉토리로 이동하여 프로젝트를 실행할 수 있습니다.
-
-```bash
-# agent-ai 디렉토리로 이동
-cd Agent/agent-ai
-
-# 가상환경 활성화 (아직 안 되어 있다면)
-source venv/bin/activate
-
-# 메인 시스템 실행 (권장)
-python main.py
-```
-
-## 🚀 실행 모드
-
-이 프로젝트는 다양한 실행 모드를 제공합니다:
-
-### 1. **전체 시스템 실행** (권장)
-
-```bash
-python main.py
-```
-
-- **LabAssistant** (메인 에이전트) + **A2A 멀티에이전트 시스템** 모두 실행
-- 3개 A2A 서버가 동시에 시작됩니다:
-  - `LabAssistant` (포트 10000) - 메인 조율 에이전트
-  - `Recorder Agent` (포트 10001) - 데이터 기록 전담
-  - `Summarize Agent` (포트 10003) - 텍스트 요약 전담
-- 양방향 에이전트 간 통신 지원
-
-### 2. **개별 에이전트 실행**
-
-```bash
-python main.py <agent_name>
-```
-
-사용 가능한 에이전트:
-
-```bash
-python main.py recorder_agent      # Recorder Agent만 실행
-python main.py summarize_agent     # Summarize Agent만 실행
-python main.py        # LabAssistant만 실행 (A2A 없이)
-```
-
-### 3. **에이전트 목록 확인**
-
-```bash
-python main.py list               # 사용 가능한 에이전트 목록
-python main.py --help             # 도움말 출력
-```
-
-## 📋 실행 성공 확인
-
-**전체 시스템 실행 시** 다음과 같은 메시지가 출력되면 정상 동작 중입니다:
-
-```bash
-🚀 A2A Manager 시작 중...
-🚀 A2A 서버 시작: http://127.0.0.1:10000 (config: main_agent.json)
-  ✅ 서버 시작됨: LabAssistant
-🚀 A2A 서버 시작: http://127.0.0.1:10001 (config: recorder_agent.json)
-  ✅ 서버 시작됨: Recorder Agent
-🚀 A2A 서버 시작: http://127.0.0.1:10003 (config: summarize_agent.json)
-  ✅ 서버 시작됨: Summarize Agent
-✅ A2A Manager 준비 완료 (서버: 3개, 클라이언트: 준비됨)
-
-🤖 에이전트를 시작합니다.
-📝 명령어:
-  - 'exit' : 종료
-  - 'debug' : 상태 확인
-  - '/node <작업내용>' : 노드 기반 멀티에이전트 실행
-  - '/a2a <agent_name> <message>' : A2A 통신
-💡 이제 LLM이 자동으로 필요시 다른 에이전트와 통신합니다!
-```
-
-## 🎯 사용 예시
-
-### 기본 대화
+## 📁 프로젝트 구조
 
 ```
-사용자: 최신 AI 논문을 찾아주세요
+Agent/
+├── agent-ai                   # A2A, Langgraphs기반 멀티에이전트 구축 (mem0, MCP 연동)
+├── MedQA_Autogen/             # AutogenBench 기반 MedQA 시나리오 탐색용 코드
+└── autogenbench_medQA         # AutogenBench 기반 MedQA 최종 시나리오 및 매트릭 탐색, 테스트
 ```
 
-### A2A 에이전트 직접 호출
+## 🔧 추가 구현 코드
 
-```
-사용자: /a2a 'Summarize Agent' '이 텍스트를 요약해주세요: [긴 텍스트]'
-사용자: /a2a 'Recorder Agent' '이 데이터를 저장해주세요'
-```
+프로젝트의 주요 실험 외에도 다음과 같은 기술 스택을 활용한 추가 구현 코드가 포함되어 있습니다:
 
-### 멀티에이전트 워크플로우
+### **멀티에이전트 시스템**
 
-```
-사용자: 이 논문을 요약하고 기록해주세요
-# → LabAssistant가 자동으로 Summarize Agent와 Recorder Agent에게 작업 분배
-```
+- **에이전트간 통신(A2A Protocol)**
+- **Langgraph를 통한 흐름제어**
+- **MCP(Model Context Protocol) 통합**
+- **mem0 장기 메모리 시스템**
 
----
+_위 기능들은 `Agent/agent-ai/` 디렉토리에 구현되어 있으며, 본 연구의 핵심 실험과는 독립적인 추가 개발 코드입니다._
